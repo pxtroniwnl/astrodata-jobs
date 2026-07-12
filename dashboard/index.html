@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Radar de Empleos Data</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="mesh" aria-hidden="true"></div>
+
+  <div class="shell">
+    <header class="top">
+      <h1>Radar de <span class="accent">Empleos Data</span></h1>
+      <div class="meta" id="meta">cargando…</div>
+    </header>
+
+    <!-- Barra de filtros flotante -->
+    <nav class="filterbar glass" id="filterbar" aria-label="Filtros">
+      <!-- pills de rol/seniority/país/modalidad/región/skills se insertan aquí -->
+      <div id="salary-wrap" style="position:relative">
+        <button class="pill" id="salary-pill">Salario <span class="caret">▼</span></button>
+        <div class="dropdown" id="salary-dd">
+          <label class="opt"><input type="checkbox" id="salary-only"> Solo con salario publicado</label>
+          <div class="salary-inputs">
+            <input type="number" id="sal-min" placeholder="Mín USD" min="0" step="1000">
+            <input type="number" id="sal-max" placeholder="Máx USD" min="0" step="1000">
+          </div>
+        </div>
+      </div>
+      <div class="seg" role="group" aria-label="Rango de fechas">
+        <button data-days="7">7d</button>
+        <button data-days="30">30d</button>
+        <button data-days="90">90d</button>
+        <button class="on">Todo</button>
+      </div>
+      <div class="spacer"></div>
+      <button class="clear-btn" id="clear">Limpiar filtros</button>
+    </nav>
+
+    <div class="chips" id="chips"></div>
+
+    <!-- KPIs -->
+    <section class="kpis" aria-label="Indicadores">
+      <div class="kpi glass k1">
+        <div class="label">Total de ofertas</div>
+        <div class="value" id="kpi-total">0</div>
+        <div class="sub">en la selección actual</div>
+      </div>
+      <div class="kpi glass k2">
+        <div class="label">Salario mediano</div>
+        <div class="value" id="kpi-salary">—</div>
+        <div class="sub" id="kpi-salary-sub"></div>
+      </div>
+      <div class="kpi glass k3">
+        <div class="label">Skill top</div>
+        <div class="value" id="kpi-skill">—</div>
+        <div class="sub" id="kpi-skill-sub"></div>
+      </div>
+      <div class="kpi glass k4">
+        <div class="label">% Remoto</div>
+        <div class="value" id="kpi-remote">0%</div>
+        <div class="sub" id="kpi-remote-sub"></div>
+      </div>
+    </section>
+
+    <div class="main">
+      <section class="charts" aria-label="Gráficas">
+        <div class="card glass">
+          <h3>Demanda por rol</h3>
+          <p class="hint">clic en una barra para filtrar todo el dashboard</p>
+          <div class="chart" id="roleChart"></div>
+        </div>
+        <div class="card glass">
+          <h3>Remoto vs presencial</h3>
+          <p class="hint">modalidad de trabajo de las ofertas filtradas</p>
+          <div class="chart" id="modeChart"></div>
+        </div>
+        <div class="card glass">
+          <h3>Skills más pedidas</h3>
+          <p class="hint">frecuencia en título + descripción · clic para filtrar</p>
+          <div class="chart" id="skillsChart"></div>
+        </div>
+        <div class="card glass">
+          <h3>Skills mejor pagadas</h3>
+          <p class="hint">salario mediano USD/año · solo ofertas con salario publicado (mín. 3)</p>
+          <div class="chart" id="skillSalaryChart"></div>
+        </div>
+        <div class="card glass">
+          <h3>Colombia por región</h3>
+          <p class="hint">Bogotá vs Medellín vs Costa y demás · clic para filtrar</p>
+          <div class="chart" id="regionChart"></div>
+        </div>
+        <div class="card glass">
+          <h3>Seniority</h3>
+          <p class="hint">nivel pedido en las ofertas · clic para filtrar</p>
+          <div class="chart" id="seniorityChart"></div>
+        </div>
+        <div class="card glass">
+          <h3>Años de experiencia requeridos</h3>
+          <p class="hint">solo ofertas que especifican años</p>
+          <div class="chart" id="expChart"></div>
+        </div>
+        <div class="card glass">
+          <h3>Ofertas por día</h3>
+          <p class="hint">según fecha de publicación · crece con cada corrida del pipeline</p>
+          <div class="chart" id="trendChart"></div>
+        </div>
+        <div class="card glass wide">
+          <h3>Combinaciones de skills que maximizan salario</h3>
+          <p class="hint">pares de skills rankeados por salario mediano · mínimo 3 ofertas con dato por par</p>
+          <div class="chart" id="comboChart"></div>
+        </div>
+      </section>
+
+      <aside class="insights glass" aria-label="Conclusiones">
+        <h3>💡 Insights</h3>
+        <p class="sub">conclusiones calculadas sobre los datos filtrados</p>
+        <div id="insights-list"></div>
+      </aside>
+    </div>
+
+    <!-- Tabla -->
+    <section class="jobs-table glass" aria-label="Ofertas">
+      <div class="head">
+        <h3>Explorar ofertas</h3>
+        <span class="hint" id="table-hint"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Título</th><th>Empresa</th><th>Ubicación</th><th>Modalidad</th>
+              <th>Seniority</th><th>Salario (USD/año)</th><th>Publicada</th>
+            </tr>
+          </thead>
+          <tbody id="jobs-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="note">
+      Fuente: vacantes públicas de LinkedIn extraídas por el pipeline local (uso personal/educativo).
+      Los salarios se normalizan a USD/año con tasas fijas y solo una minoría de ofertas los publica:
+      úsalos como referencia relativa, no absoluta. Los datos se acumulan con cada corrida diaria,
+      así que las tendencias mejoran con el tiempo.
+    </footer>
+  </div>
+
+  <script src="vendor/echarts.min.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

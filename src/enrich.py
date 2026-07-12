@@ -228,6 +228,8 @@ def colombia_region(location: str, country: str, work_mode: str) -> str | None:
             return name
     if work_mode == "Remoto":
         return "Remoto Colombia"
+    if not (location or "").strip():
+        return "Sin ciudad especificada"
     return "Otras regiones"
 
 
