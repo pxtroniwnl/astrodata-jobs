@@ -1,0 +1,9 @@
+# Datos y logs (crecen con cada corrida)
+data/
+logs/
+dashboard/data.js
+
+# Python
+.venv/
+__pycache__/
+*.pyc

@@ -1,0 +1,58 @@
+# Configuración del pipeline de extracción de empleos de data en LinkedIn
+
+scraping:
+  results_wanted: 100          # resultados máximos por búsqueda
+  hours_old: 24                # corrida diaria: solo vacantes del último día
+  backfill_hours: 168          # con --backfill: última semana
+  linkedin_fetch_description: true   # más lento, pero trae la descripción (necesaria para skills)
+  pause_seconds: [30, 60]      # pausa aleatoria entre búsquedas para no ser bloqueados
+
+search_terms:
+  english:
+    - Data Engineer
+    - Data Scientist
+    - Data Analyst
+    - Machine Learning Engineer
+    - Analytics Engineer
+    - Business Intelligence
+  spanish:
+    - Ingeniero de Datos
+    - Científico de Datos
+    - Analista de Datos
+
+# Cada ubicación define qué grupos de términos se buscan en ella.
+# Colombia va sin filtro de remoto (captura presencial + remoto);
+# el resto solo remoto.
+locations:
+  - name: Colombia
+    is_remote: false
+    term_groups: [english, spanish]
+  - name: Latin America
+    is_remote: true
+    term_groups: [english, spanish]
+  - name: United States
+    is_remote: true
+    term_groups: [english]
+  - name: Worldwide
+    is_remote: true
+    term_groups: [english]
+  # Descomenta para ampliar cobertura (alarga la corrida y sube el riesgo de bloqueo):
+  # - name: Mexico
+  #   is_remote: true
+  #   term_groups: [spanish, english]
+  # - name: Argentina
+  #   is_remote: true
+  #   term_groups: [spanish, english]
+
+# Tasas fijas para normalizar salarios a USD (ajustables a mano)
+fx_to_usd:
+  USD: 1.0
+  COP: 0.00025
+  MXN: 0.055
+  ARS: 0.0008
+  BRL: 0.19
+  PEN: 0.27
+  CLP: 0.0011
+  EUR: 1.08
+  GBP: 1.27
+  CAD: 0.73
