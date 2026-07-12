@@ -26,6 +26,7 @@ def main() -> None:
     parser.add_argument("--limit", type=int, help="máximo de búsquedas a ejecutar (pruebas)")
     parser.add_argument("--results", type=int, help="resultados por búsqueda (pruebas)")
     parser.add_argument("--skip-scrape", action="store_true", help="solo re-enriquecer y exportar")
+    parser.add_argument("--config", default=str(CONFIG_PATH), help="ruta a un config.yaml alternativo")
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -34,7 +35,7 @@ def main() -> None:
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    with open(CONFIG_PATH, encoding="utf-8") as f:
+    with open(args.config, encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
     conn = storage.connect()

@@ -6,8 +6,24 @@ import time
 
 import pandas as pd
 from jobspy import scrape_jobs
+from jobspy.model import Country
 
 log = logging.getLogger(__name__)
+
+# jobspy aborta una búsqueda entera si una vacante viene de un país fuera de su
+# enum (p. ej. Honduras en búsquedas de "Latin America"). Fallback a WORLDWIDE
+# para no perder la búsqueda; el país real se re-infiere en enrich.py.
+_orig_from_string = Country.from_string.__func__
+
+
+def _safe_from_string(cls, country_str: str):
+    try:
+        return _orig_from_string(cls, country_str)
+    except ValueError:
+        return cls.WORLDWIDE
+
+
+Country.from_string = classmethod(_safe_from_string)
 
 
 def build_search_matrix(config: dict) -> list[dict]:
