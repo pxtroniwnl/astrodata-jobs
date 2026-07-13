@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
-# Corrida diaria del pipeline (pensado para cron). Uso: ./run_pipeline.sh [--backfill]
+# astro-data jobs — pipeline automático (cron cada 2h)
 set -euo pipefail
 
-cd "$(dirname "$(readlink -f "$0")")"
-mkdir -p logs
+PROJECT_DIR="/home/pxtroniwnl/Documents/projects/personal/portfolio/astrodata-jobs"
+LOG_DIR="$PROJECT_DIR/logs"
+LOG_FILE="$LOG_DIR/pipeline_$(date +%Y-%m-%d_%H%M).log"
 
-exec >> "logs/pipeline_$(date +%F).log" 2>&1
-echo "===== corrida $(date '+%F %T') ====="
-~/.local/bin/uv run python -m src.main "$@"
+mkdir -p "$LOG_DIR"
+
+echo "=== astro-data jobs pipeline — $(date) ===" | tee "$LOG_FILE"
+cd "$PROJECT_DIR"
+uv run python -m src.main 2>&1 | tee -a "$LOG_FILE"
+echo "=== Fin: $(date) ===" | tee -a "$LOG_FILE"
+
+# Limpiar logs de hace más de 30 días
+find "$LOG_DIR" -name "pipeline_*.log" -mtime +30 -delete 2>/dev/null || true

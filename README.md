@@ -103,8 +103,9 @@ astrodata-jobs/
 │   ├── app.js               # Lógica del dashboard
 │   ├── job-detail.js        # Modal de detalle + CV upload
 │   ├── roadmaps.js          # Lógica de roadmaps
-│   └── data/roadmaps.json   # Datos de roadmaps (5 roles)
+│   └── roadmaps-data.json   # Datos de roadmaps (5 roles)
 ├── src/                     # Pipeline de scraping y enriquecimiento
+├── run_pipeline.sh          # Script para cron (logging + cleanup)
 ├── config.yaml              # Configuración del pipeline
 ├── data/                    # Datos acumulados (jobs.db, parquet, csv)
 └── CONTRIBUTING.md          # Guía de contribución
@@ -112,11 +113,18 @@ astrodata-jobs/
 
 ## Corrida automática (cron)
 
+Configurado para ejecutarse **cada 2 horas** automáticamente:
+
 ```cron
-0 9 * * * /ruta/al/proyecto/run_pipeline.sh
+0 */2 * * * /home/pxtroniwnl/Documents/projects/personal/portfolio/astrodata-jobs/run_pipeline.sh
 ```
 
-Los logs quedan en `logs/pipeline_YYYY-MM-DD.log`.
+El script `run_pipeline.sh`:
+- Ejecuta el pipeline y loguea a `logs/pipeline_YYYY-MM-DD_HHMM.log`
+- Limpia automáticamente logs de más de 30 días
+
+Para ver el cron actual: `crontab -l`
+Para desactivar: `crontab -r`
 
 ## Estructura de datos
 
