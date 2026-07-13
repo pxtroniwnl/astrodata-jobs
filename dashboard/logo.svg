@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 200" width="660" height="200" role="img" aria-label="astro-data jobs">
+  <!-- Marca: planeta con órbita y satélite, paleta salvia/crema -->
+  <circle cx="100" cy="104" r="62" fill="none" stroke="#cfd8bd" stroke-width="16" opacity="0.45"/>
+  <path d="M 41.7 125.2 A 62 62 0 1 1 161.1 93.2" fill="none" stroke="#a9c46e" stroke-width="16" stroke-linecap="round"/>
+  <circle cx="100" cy="104" r="27" fill="#a9c46e"/>
+  <circle cx="157.5" cy="40" r="12.5" fill="#71963b"/>
+  <!-- Wordmark -->
+  <text x="228" y="99" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', Inter, 'Segoe UI', Roboto, sans-serif" font-size="56" font-weight="700" letter-spacing="-1.5" fill="#f2f3ee">astro-data</text>
+  <text x="231" y="151" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', Inter, 'Segoe UI', Roboto, sans-serif" font-size="38" font-weight="400" letter-spacing="13" fill="#a9aea2">jobs</text>
+  <rect x="229" y="168" width="266" height="5" rx="2.5" fill="#cfd8bd" opacity="0.45"/>
+</svg>

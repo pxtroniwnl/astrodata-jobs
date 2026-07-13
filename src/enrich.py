@@ -1,4 +1,4 @@
-"""Enriquecimiento: skills, rol canónico, seniority, región de Colombia y salario USD.
+"""Enriquecimiento: skills, rol canónico, seniority, ciudad, región de Colombia y salario USD.
 
 Corre sobre toda la base después de cada upsert, así las reglas se pueden
 mejorar y re-aplicar al histórico completo.
@@ -8,6 +8,7 @@ import json
 import logging
 import re
 import sqlite3
+import unicodedata
 
 import pandas as pd
 
@@ -163,6 +164,50 @@ _KNOWN_COUNTRIES = {
 }
 
 
+def _strip_accents(s: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
+
+
+# Primer segmento de location -> ciudad canónica. Claves sin acentos y en
+# minúsculas; unifica variantes que LinkedIn mezcla ("Medellin"/"Medellín").
+_CITY_ALIASES = {
+    "bogota": "Bogotá",
+    "bogota d.c.": "Bogotá",
+    "bogota d.c": "Bogotá",
+    "santa fe de bogota": "Bogotá",
+    "medellin": "Medellín",
+    "cancun": "Cancún",
+    "mexico city": "Ciudad de México",
+    "ciudad de mexico": "Ciudad de México",
+    "cdmx": "Ciudad de México",
+    "sao paulo": "São Paulo",
+    "asuncion": "Asunción",
+    "brasilia": "Brasilia",
+}
+
+_COUNTRY_KEYS = {_strip_accents(k) for k in _KNOWN_COUNTRIES}
+
+# Primeros segmentos que no son una ciudad
+_NON_CITY_KEYS = _COUNTRY_KEYS | {"remote", "remoto", "latin america", "south america", "worldwide"}
+
+
+def extract_city(location: str) -> str | None:
+    """Ciudad = primer segmento de location ("Medellín, Antioquia, Colombia").
+
+    Devuelve None si no hay location o el segmento es un país/placeholder,
+    no una ciudad (p. ej. location == "Colombia").
+    """
+    seg = (location or "").split(",")[0].strip()
+    if not seg:
+        return None
+    key = _strip_accents(seg.lower())
+    if key in _CITY_ALIASES:
+        return _CITY_ALIASES[key]
+    if key in _NON_CITY_KEYS:
+        return None
+    return seg
+
+
 def extract_skills(text: str) -> list[str]:
     return [name for name, rx in _COMPILED_SKILLS.items() if rx.search(text)]
 
@@ -295,17 +340,18 @@ def enrich_all(conn: sqlite3.Connection, config: dict) -> int:
             row["search_location"] in remote_locations,
         )
         country = infer_country(row["location"], row["search_location"])
+        city = extract_city(row["location"])
         region = colombia_region(row["location"], country, mode)
         lo, hi, mid = salary_usd(row, fx)
 
         updates.append(
             (role, sen, years, json.dumps(skills, ensure_ascii=False),
-             country, region, mode, lo, hi, mid, row["id"])
+             country, city, region, mode, lo, hi, mid, row["id"])
         )
 
     conn.executemany(
         """UPDATE jobs SET role_canonical=?, seniority=?, years_experience=?,
-           skills=?, country=?, region_colombia=?, work_mode=?,
+           skills=?, country=?, city=?, region_colombia=?, work_mode=?,
            salary_min_usd=?, salary_max_usd=?, salary_mid_usd=? WHERE id=?""",
         updates,
     )

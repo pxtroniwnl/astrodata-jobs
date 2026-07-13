@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     years_experience REAL,
     skills TEXT,
     country TEXT,
+    city TEXT,
     region_colombia TEXT,
     work_mode TEXT,
     salary_min_usd REAL,
@@ -78,7 +79,16 @@ def connect() -> sqlite3.Connection:
     DATA_DIR.mkdir(exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.execute(SCHEMA)
+    _migrate(conn)
     return conn
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    # Columnas añadidas después de que existieran bases ya creadas
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(jobs)")}
+    if "city" not in existing:
+        conn.execute("ALTER TABLE jobs ADD COLUMN city TEXT")
+        conn.commit()
 
 
 def save_raw_snapshot(jobs: pd.DataFrame) -> Path:

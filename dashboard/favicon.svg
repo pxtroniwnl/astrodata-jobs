@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="astro-data jobs">
+  <!-- Solo la marca, cuadrada y nítida a cualquier tamaño -->
+  <circle cx="100" cy="112" r="64" fill="none" stroke="#cfd8bd" stroke-width="17" opacity="0.45"/>
+  <path d="M 39.8 133.9 A 64 64 0 1 1 163 100.9" fill="none" stroke="#a9c46e" stroke-width="17" stroke-linecap="round"/>
+  <circle cx="100" cy="112" r="28" fill="#a9c46e"/>
+  <circle cx="160" cy="45" r="13.5" fill="#71963b"/>
+</svg>

@@ -3,152 +3,195 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Radar de Empleos Data</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>astro-data jobs — radar del mercado de empleos data</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="favicon.png">
+  <link rel="stylesheet" href="landing.css">
 </head>
 <body>
-  <div class="mesh" aria-hidden="true"></div>
+  <div class="glow" aria-hidden="true"></div>
+  <div class="stars" aria-hidden="true"></div>
 
-  <div class="shell">
-    <header class="top">
-      <h1>Radar de <span class="accent">Empleos Data</span></h1>
-      <div class="meta" id="meta">cargando…</div>
-    </header>
-
-    <!-- Barra de filtros flotante -->
-    <nav class="filterbar glass" id="filterbar" aria-label="Filtros">
-      <!-- pills de rol/seniority/país/modalidad/región/skills se insertan aquí -->
-      <div id="salary-wrap" style="position:relative">
-        <button class="pill" id="salary-pill">Salario <span class="caret">▼</span></button>
-        <div class="dropdown" id="salary-dd">
-          <label class="opt"><input type="checkbox" id="salary-only"> Solo con salario publicado</label>
-          <div class="salary-inputs">
-            <input type="number" id="sal-min" placeholder="Mín USD" min="0" step="1000">
-            <input type="number" id="sal-max" placeholder="Máx USD" min="0" step="1000">
-          </div>
-        </div>
+  <div class="wrap">
+    <nav class="topnav" aria-label="Principal">
+      <a class="nav-brand" href="index.html"><img src="logo.svg" alt="astro-data jobs"></a>
+      <div class="nav-links">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="roadmaps.html">Roadmaps</a>
+        <a href="#metodologia">Metodología</a>
       </div>
-      <div class="seg" role="group" aria-label="Rango de fechas">
-        <button data-days="7">7d</button>
-        <button data-days="30">30d</button>
-        <button data-days="90">90d</button>
-        <button class="on">Todo</button>
-      </div>
-      <div class="spacer"></div>
-      <button class="clear-btn" id="clear">Limpiar filtros</button>
+      <a class="btn btn-solid" href="dashboard.html">Abrir dashboard</a>
     </nav>
 
-    <div class="chips" id="chips"></div>
+    <header class="hero">
+      <!-- Constelación: los roles como cuerpos en órbita, con conteos reales -->
+      <svg class="constellation" viewBox="0 0 1200 640" preserveAspectRatio="none" aria-hidden="true">
+        <line x1="95" y1="165" x2="380" y2="90"></line>
+        <line x1="380" y1="90" x2="1090" y2="140"></line>
+        <line x1="95" y1="165" x2="130" y2="480"></line>
+        <line x1="1090" y1="140" x2="1075" y2="450"></line>
+        <line x1="130" y1="480" x2="470" y2="580"></line>
+        <line x1="1075" y1="450" x2="760" y2="590"></line>
+        <circle cx="380" cy="90" r="2.4"></circle>
+        <circle cx="470" cy="580" r="2.2"></circle>
+        <circle cx="760" cy="590" r="2.4"></circle>
+        <circle cx="905" cy="60" r="1.8"></circle>
+        <circle cx="250" cy="300" r="1.6"></circle>
+        <circle cx="990" cy="300" r="1.6"></circle>
+      </svg>
+      <div class="node n1"><span class="dot"></span><div><span class="node-name">Data Engineer</span><span class="node-count" data-role="Data Engineer">—</span></div></div>
+      <div class="node n2"><span class="dot"></span><div><span class="node-name">Data Scientist</span><span class="node-count" data-role="Data Scientist">—</span></div></div>
+      <div class="node n3"><span class="dot"></span><div><span class="node-name">Data Analyst</span><span class="node-count" data-role="Data Analyst">—</span></div></div>
+      <div class="node n4"><span class="dot"></span><div><span class="node-name">ML/AI Engineer</span><span class="node-count" data-role="ML/AI Engineer">—</span></div></div>
 
-    <!-- KPIs -->
-    <section class="kpis" aria-label="Indicadores">
-      <div class="kpi glass k1">
-        <div class="label">Total de ofertas</div>
-        <div class="value" id="kpi-total">0</div>
-        <div class="sub">en la selección actual</div>
+      <a class="badge" href="dashboard.html">Radar activo · corrida diaria desde LinkedIn <span class="arr">→</span></a>
+      <h1>El mercado data,<br><span class="fade">cartografiado a diario.</span></h1>
+      <p class="sub">
+        Un pipeline scrapea las vacantes de datos cada mañana, acumula el histórico
+        deduplicado y lo convierte en señales: qué rol despega, qué skills pagan y
+        desde qué órbita puedes competir.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-solid" href="dashboard.html">Abrir el dashboard <span class="arr">↗</span></a>
+        <a class="btn btn-ghost" href="#metodologia">Cómo funciona</a>
       </div>
-      <div class="kpi glass k2">
-        <div class="label">Salario mediano</div>
-        <div class="value" id="kpi-salary">—</div>
-        <div class="sub" id="kpi-salary-sub"></div>
+
+      <div class="hero-foot">
+        <span class="microlabel">01/02 · desplázate</span>
+        <span class="microlabel">radar astro-data</span>
       </div>
-      <div class="kpi glass k3">
-        <div class="label">Skill top</div>
-        <div class="value" id="kpi-skill">—</div>
-        <div class="sub" id="kpi-skill-sub"></div>
+    </header>
+
+    <div class="strip" id="skills-strip" aria-label="Skills más pedidas en las vacantes"></div>
+
+    <section class="stats" id="datos" aria-label="Datos acumulados">
+      <div class="tile t1">
+        <span class="microlabel">Vacantes acumuladas</span>
+        <div class="value" id="st-total">—</div>
+        <div class="sub" id="st-total-sub">histórico deduplicado</div>
       </div>
-      <div class="kpi glass k4">
-        <div class="label">% Remoto</div>
-        <div class="value" id="kpi-remote">0%</div>
-        <div class="sub" id="kpi-remote-sub"></div>
+      <div class="tile t2">
+        <span class="microlabel">Trabajo remoto</span>
+        <div class="value" id="st-remote">—</div>
+        <div class="sub">de las ofertas se puede hacer desde cualquier órbita</div>
+      </div>
+      <div class="tile t3">
+        <span class="microlabel">Salario mediano</span>
+        <div class="value" id="st-salary">—</div>
+        <div class="sub" id="st-salary-sub">USD/año · solo ofertas con dato publicado</div>
+      </div>
+      <div class="tile t4">
+        <span class="microlabel">Cobertura</span>
+        <div class="value" id="st-geo">—</div>
+        <div class="sub" id="st-geo-sub">países y ciudades con al menos una oferta</div>
       </div>
     </section>
 
-    <div class="main">
-      <section class="charts" aria-label="Gráficas">
-        <div class="card glass">
-          <h3>Demanda por rol</h3>
-          <p class="hint">clic en una barra para filtrar todo el dashboard</p>
-          <div class="chart" id="roleChart"></div>
-        </div>
-        <div class="card glass">
-          <h3>Remoto vs presencial</h3>
-          <p class="hint">modalidad de trabajo de las ofertas filtradas</p>
-          <div class="chart" id="modeChart"></div>
-        </div>
-        <div class="card glass">
-          <h3>Skills más pedidas</h3>
-          <p class="hint">frecuencia en título + descripción · clic para filtrar</p>
-          <div class="chart" id="skillsChart"></div>
-        </div>
-        <div class="card glass">
-          <h3>Skills mejor pagadas</h3>
-          <p class="hint">salario mediano USD/año · solo ofertas con salario publicado (mín. 3)</p>
-          <div class="chart" id="skillSalaryChart"></div>
-        </div>
-        <div class="card glass">
-          <h3>Colombia por región</h3>
-          <p class="hint">Bogotá vs Medellín vs Costa y demás · clic para filtrar</p>
-          <div class="chart" id="regionChart"></div>
-        </div>
-        <div class="card glass">
-          <h3>Seniority</h3>
-          <p class="hint">nivel pedido en las ofertas · clic para filtrar</p>
-          <div class="chart" id="seniorityChart"></div>
-        </div>
-        <div class="card glass">
-          <h3>Años de experiencia requeridos</h3>
-          <p class="hint">solo ofertas que especifican años</p>
-          <div class="chart" id="expChart"></div>
-        </div>
-        <div class="card glass">
-          <h3>Ofertas por día</h3>
-          <p class="hint">según fecha de publicación · crece con cada corrida del pipeline</p>
-          <div class="chart" id="trendChart"></div>
-        </div>
-        <div class="card glass wide">
-          <h3>Combinaciones de skills que maximizan salario</h3>
-          <p class="hint">pares de skills rankeados por salario mediano · mínimo 3 ofertas con dato por par</p>
-          <div class="chart" id="comboChart"></div>
-        </div>
-      </section>
-
-      <aside class="insights glass" aria-label="Conclusiones">
-        <h3>💡 Insights</h3>
-        <p class="sub">conclusiones calculadas sobre los datos filtrados</p>
-        <div id="insights-list"></div>
-      </aside>
-    </div>
-
-    <!-- Tabla -->
-    <section class="jobs-table glass" aria-label="Ofertas">
-      <div class="head">
-        <h3>Explorar ofertas</h3>
-        <span class="hint" id="table-hint"></span>
+    <section class="steps" id="metodologia">
+      <div class="steps-head">
+        <span class="microlabel">Metodología</span>
+        <h2>Tres etapas, <span class="fade">una órbita diaria.</span></h2>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Título</th><th>Empresa</th><th>Ubicación</th><th>Modalidad</th>
-              <th>Seniority</th><th>Salario (USD/año)</th><th>Publicada</th>
-            </tr>
-          </thead>
-          <tbody id="jobs-tbody"></tbody>
-        </table>
+      <div class="steps-grid">
+        <div class="step">
+          <span class="num">01 / SCRAPE</span>
+          <h3>Barrido de LinkedIn</h3>
+          <p>Cada mañana el pipeline recorre una matriz de términos × ubicaciones
+          (Colombia presencial y remoto LATAM, EE.UU. y mundial) con pausas
+          anti-bloqueo, y guarda un snapshot crudo de cada corrida.</p>
+        </div>
+        <div class="step">
+          <span class="num">02 / ENRIQUECE</span>
+          <h3>Señales sobre el texto</h3>
+          <p>Deduplica por vacante y extrae skills, rol canónico, seniority, años de
+          experiencia, ciudad, país y salario normalizado a <code>USD/año</code>.
+          Las reglas se re-aplican al histórico completo: mejorar una regla mejora
+          también los datos viejos.</p>
+        </div>
+        <div class="step">
+          <span class="num">03 / DECIDE</span>
+          <h3>Dashboard con cross-filtering</h3>
+          <p>Todo aterriza en un dashboard con mapa mundial, filtros buscables e
+          insights calculados sobre la selección: demanda por rol, skills mejor
+          pagadas, remoto vs presencial y dónde se concentra la oferta.</p>
+        </div>
       </div>
     </section>
 
-    <footer class="note">
-      Fuente: vacantes públicas de LinkedIn extraídas por el pipeline local (uso personal/educativo).
-      Los salarios se normalizan a USD/año con tasas fijas y solo una minoría de ofertas los publica:
-      úsalos como referencia relativa, no absoluta. Los datos se acumulan con cada corrida diaria,
-      así que las tendencias mejoran con el tiempo.
+    <section class="cta-band">
+      <h2>El histórico crece<br>con cada corrida.</h2>
+      <p>Cuanto más acumula el radar, más nítidas son las tendencias. Explóralo con
+      los filtros o espera: mañana habrá más datos que hoy.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;position:relative;">
+        <a class="btn btn-solid" href="dashboard.html">Explorar las vacantes <span class="arr">↗</span></a>
+        <a class="btn btn-ghost" href="roadmaps.html">Ver roadmaps de aprendizaje</a>
+      </div>
+    </section>
+
+    <footer>
+      <div class="note">
+        Fuente: vacantes públicas de LinkedIn extraídas por un pipeline local de uso
+        personal/educativo. Los salarios se normalizan a USD/año y solo una minoría de
+        ofertas los publica: úsalos como referencia relativa.
+      </div>
+      <span class="microlabel" id="foot-updated">astro-data jobs</span>
     </footer>
   </div>
 
-  <script src="vendor/echarts.min.js"></script>
   <script src="data.js"></script>
-  <script src="app.js"></script>
+  <script>
+    (function () {
+      const raw = window.JOBS_DATA || { jobs: [], generated_at: null };
+      const jobs = raw.jobs || [];
+      const fmt = (n) => n.toLocaleString("es-CO");
+      const $ = (s) => document.querySelector(s);
+
+      // Nodos de la constelación: conteo real por rol
+      document.querySelectorAll(".node-count").forEach((el) => {
+        const n = jobs.filter((j) => j.role_canonical === el.dataset.role).length;
+        el.textContent = fmt(n);
+      });
+
+      // Strip de skills — duplica para marquee infinito
+      const sk = new Map();
+      for (const j of jobs) for (const s of j.skills || []) sk.set(s, (sk.get(s) || 0) + 1);
+      const top = [...sk.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
+      const strip = $("#skills-strip");
+      const items = top.map(([s]) => `<span>${s}</span>`).join("");
+      strip.innerHTML = items + items;
+
+      // Tiles de datos
+      $("#st-total").textContent = fmt(jobs.length);
+      const remote = jobs.filter((j) => j.work_mode === "Remoto").length;
+      $("#st-remote").textContent = jobs.length ? Math.round((remote / jobs.length) * 100) + "%" : "—";
+      const sal = jobs.map((j) => j.salary_mid_usd).filter((v) => v != null).sort((a, b) => a - b);
+      if (sal.length) {
+        const m = sal.length % 2 ? sal[(sal.length - 1) / 2] : (sal[sal.length / 2 - 1] + sal[sal.length / 2]) / 2;
+        $("#st-salary").textContent = "$" + Math.round(m / 1000) + "k";
+        $("#st-salary-sub").textContent = `USD/año · sobre ${fmt(sal.length)} ofertas con dato publicado`;
+      }
+      const uniq = (k) => new Set(jobs.map((j) => j[k]).filter((v) => v != null && v !== "")).size;
+      $("#st-geo").textContent = uniq("country") + " · " + fmt(uniq("city"));
+      if (raw.generated_at) $("#foot-updated").textContent = "actualizado " + raw.generated_at.slice(0, 10);
+
+      // Scroll-reveal via IntersectionObserver
+      const revealEls = document.querySelectorAll(
+        ".tile, .step, .steps-head, .cta-band"
+      );
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((e) => {
+            if (e.isIntersecting) {
+              e.target.classList.add("visible");
+              observer.unobserve(e.target);
+            }
+          });
+        },
+        { threshold: 0.15, rootMargin: "0px 0px -40px 0px" }
+      );
+      revealEls.forEach((el) => observer.observe(el));
+    })();
+  </script>
 </body>
 </html>

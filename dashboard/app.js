@@ -1,4 +1,4 @@
-/* Radar de Empleos Data — lógica de filtros, charts e insights */
+/* astro-data jobs — lógica de filtros, charts e insights */
 "use strict";
 
 /* ---------------- Datos ---------------- */
@@ -16,39 +16,42 @@ function parseDate(s) {
   return isNaN(d) ? null : d;
 }
 
-/* ---------------- Paleta (validada, modo oscuro) ---------------- */
+/* ---------------- Paleta oscura (validada, ref. DeFi) ---------------- */
 const C = {
-  blue: "#0A84FF", green: "#22A044", orange: "#CC6E02", violet: "#BF5AF2",
-  teal: "#1E9ECB", pink: "#FF375F", gold: "#B58800", gray: "#8E8E93",
-  ink: "rgba(255,255,255,0.92)", ink2: "rgba(235,235,245,0.62)",
-  ink3: "rgba(235,235,245,0.38)", grid: "rgba(255,255,255,0.07)",
+  blue: "#4C7FD0", green: "#71963B", orange: "#C05E2F", violet: "#A45B9B",
+  teal: "#12A088", pink: "#C05E2F", gold: "#A8862E", gray: "#7C8276",
+  ink: "#F2F3EE", ink2: "rgba(242,243,238,0.65)",
+  ink3: "rgba(242,243,238,0.4)", grid: "rgba(255,255,255,0.07)",
 };
 
+/* Rampa secuencial (magnitud) para el mapa coroplético: salvia oscuro → brillante */
+const MAP_RAMP = ["#242920", "#3A472E", "#55693C", "#7A9450", "#A9C46E"];
+
 const ROLE_COLORS = {
-  "Data Engineer": C.blue,
+  "Data Engineer": C.green,
   "Data Scientist": C.violet,
-  "Data Analyst": C.green,
-  "ML/AI Engineer": C.pink,
+  "Data Analyst": C.blue,
+  "ML/AI Engineer": C.orange,
   "Analytics Engineer": C.teal,
-  "BI": C.orange,
-  "Data Architect": C.gold,
+  "BI": C.gold,
+  "Data Architect": C.gray,
   "Otro": C.gray,
 };
 
-const MODE_COLORS = { "Remoto": C.blue, "Presencial": C.orange, "Híbrido": C.violet };
+const MODE_COLORS = { "Remoto": C.green, "Presencial": C.gold, "Híbrido": C.violet };
 const SENIORITY_ORDER = ["Junior", "Mid", "Senior", "Lead+", "No especificado"];
 
 /* ---------------- Estado de filtros ---------------- */
 const state = {
   role: new Set(), seniority: new Set(), country: new Set(),
-  mode: new Set(), region: new Set(), skill: new Set(),
+  mode: new Set(), city: new Set(), skill: new Set(),
   days: null, salaryOnly: false, salMin: null, salMax: null,
 };
 
 function anyFilterActive() {
   return (
     state.role.size || state.seniority.size || state.country.size ||
-    state.mode.size || state.region.size || state.skill.size ||
+    state.mode.size || state.city.size || state.skill.size ||
     state.days || state.salaryOnly || state.salMin != null || state.salMax != null
   );
 }
@@ -61,9 +64,9 @@ function filteredJobs(except = null) {
   return JOBS.filter((j) => {
     if (except !== "role" && state.role.size && !state.role.has(j.role_canonical)) return false;
     if (except !== "seniority" && state.seniority.size && !state.seniority.has(j.seniority)) return false;
-    if (state.country.size && !state.country.has(j.country)) return false;
+    if (except !== "country" && state.country.size && !state.country.has(j.country)) return false;
     if (except !== "mode" && state.mode.size && !state.mode.has(j.work_mode)) return false;
-    if (except !== "region" && state.region.size && !state.region.has(j.region_colombia)) return false;
+    if (except !== "city" && state.city.size && !state.city.has(j.city)) return false;
     if (except !== "skill" && state.skill.size) {
       for (const s of state.skill) if (!j.skills.includes(s)) return false;
     }
@@ -116,7 +119,7 @@ const FILTER_DEFS = [
   { key: "seniority", label: "Seniority", values: () => SENIORITY_ORDER.filter((s) => countBy(JOBS, "seniority").has(s)) },
   { key: "country", label: "País", values: () => sortedKeys(countBy(JOBS, "country")) },
   { key: "mode", label: "Modalidad", values: () => ["Remoto", "Híbrido", "Presencial"] },
-  { key: "region", label: "Región CO", values: () => sortedKeys(countBy(JOBS, "region_colombia")) },
+  { key: "city", label: "Ciudad", values: () => sortedKeys(countBy(JOBS, "city")) },
   { key: "skill", label: "Skills", values: () => sortedKeys(skillCounts()).slice(0, 30) },
 ];
 
@@ -132,7 +135,7 @@ function sortedKeys(map) {
 
 const fieldCount = (key) => {
   if (key === "skill") return skillCounts();
-  const prop = { role: "role_canonical", seniority: "seniority", country: "country", mode: "work_mode", region: "region_colombia" }[key];
+  const prop = { role: "role_canonical", seniority: "seniority", country: "country", mode: "work_mode", city: "city" }[key];
   return countBy(JOBS, prop);
 };
 
@@ -152,6 +155,23 @@ function buildFilterBar() {
 
     const dd = document.createElement("div");
     dd.className = "dropdown";
+
+    // Búsqueda dentro del dropdown para listas largas (Ciudad, País, Skills…)
+    if (values.length > 8) {
+      const search = document.createElement("input");
+      search.type = "search";
+      search.className = "search-input";
+      search.placeholder = `Buscar ${def.label.toLowerCase()}…`;
+      search.addEventListener("click", (e) => e.stopPropagation());
+      search.addEventListener("input", () => {
+        const q = normalize(search.value);
+        dd.querySelectorAll("label.opt").forEach((opt) => {
+          opt.style.display = !q || normalize(opt.textContent).includes(q) ? "" : "none";
+        });
+      });
+      dd.appendChild(search);
+    }
+
     for (const v of values) {
       const opt = document.createElement("label");
       opt.className = "opt";
@@ -191,7 +211,7 @@ function buildFilterBar() {
   });
 
   $("#clear").addEventListener("click", () => {
-    for (const k of ["role", "seniority", "country", "mode", "region", "skill"]) state[k].clear();
+    for (const k of ["role", "seniority", "country", "mode", "city", "skill"]) state[k].clear();
     state.days = null; state.salaryOnly = false; state.salMin = null; state.salMax = null;
     $("#salary-only").checked = false; $("#sal-min").value = ""; $("#sal-max").value = "";
     refresh();
@@ -234,7 +254,7 @@ function syncFilterBar() {
     c.addEventListener("click", onRemove);
     chips.appendChild(c);
   };
-  for (const key of ["role", "seniority", "country", "mode", "region", "skill"]) {
+  for (const key of ["role", "seniority", "country", "mode", "city", "skill"]) {
     for (const v of state[key]) addChip(v, () => toggle(state[key], v));
   }
   if (state.days) addChip(`Últimos ${state.days} días`, () => { state.days = null; refresh(); });
@@ -245,6 +265,10 @@ function syncFilterBar() {
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function normalize(s) {
+  return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 /* ---------------- KPIs ---------------- */
@@ -293,12 +317,12 @@ function renderKpis(jobs) {
 const charts = {};
 
 const TOOLTIP = {
-  backgroundColor: "rgba(28,30,48,0.92)",
-  borderColor: "rgba(255,255,255,0.16)",
+  backgroundColor: "#1B1E19",
+  borderColor: "rgba(255,255,255,0.12)",
   borderWidth: 1,
   padding: [10, 14],
   textStyle: { color: C.ink, fontSize: 12.5 },
-  extraCssText: "backdrop-filter: blur(20px); border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45);",
+  extraCssText: "border-radius: 14px; box-shadow: 0 14px 40px rgba(0,0,0,.5);",
 };
 
 const AXIS_LABEL = { color: C.ink3, fontSize: 11.5 };
@@ -313,8 +337,8 @@ function initChart(id) {
 
 function barGradient(hex, horizontal = true) {
   return new echarts.graphic.LinearGradient(...(horizontal ? [0, 0, 1, 0] : [0, 1, 0, 0]), [
-    { offset: 0, color: hexA(hex, 0.35) },
-    { offset: 1, color: hexA(hex, 0.9) },
+    { offset: 0, color: hexA(hex, 0.55) },
+    { offset: 1, color: hexA(hex, 0.95) },
   ]);
 }
 
@@ -367,7 +391,7 @@ function renderModeChart(jobs) {
   const data = ["Remoto", "Híbrido", "Presencial"].filter((m) => counts.has(m)).map((m) => ({
     name: m, value: counts.get(m),
     itemStyle: dimIf(state.mode.size && !state.mode.has(m), {
-      color: MODE_COLORS[m], borderColor: "#101226", borderWidth: 2,
+      color: MODE_COLORS[m], borderColor: "#0B0C0A", borderWidth: 2,
     }),
   }));
   charts.modeChart.setOption({
@@ -413,7 +437,7 @@ function renderSkillsChart(jobs) {
       data: top.map(([k, v]) => ({
         name: k, value: v,
         itemStyle: dimIf(state.skill.size && !state.skill.has(k), {
-          color: barGradient(C.blue), borderRadius: [0, 4, 4, 0],
+          color: barGradient(C.green), borderRadius: [0, 4, 4, 0],
         }),
       })),
     }],
@@ -460,39 +484,107 @@ function renderSkillSalaryChart(jobs) {
   }, true);
 }
 
-/* --- 5. Colombia por región --- */
-function renderRegionChart(jobs) {
-  const counts = [...countBy(jobs, "region_colombia").entries()].sort((a, b) => b[1] - a[1]);
-  setEmpty("regionChart", counts.length, "No hay ofertas de Colombia en esta selección");
-  charts.regionChart.setOption({
-    tooltip: { ...TOOLTIP, formatter: (p) => regionTooltip(p.name, jobs) },
-    grid: { left: 8, right: 10, top: 14, bottom: 4, containLabel: true },
-    xAxis: {
-      type: "category", data: counts.map(([k]) => k),
-      axisLine: { lineStyle: { color: C.grid } }, axisTick: { show: false },
-      axisLabel: { ...AXIS_LABEL, interval: 0, rotate: counts.length > 4 ? 24 : 0 },
+/* --- 5. Top ciudades --- */
+function renderCityChart(jobs) {
+  const withCity = jobs.filter((j) => j.city != null).length;
+  const top = [...countBy(jobs, "city").entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).reverse();
+  setEmpty("cityChart", top.length, "Ninguna oferta filtrada publica ciudad");
+  charts.cityChart.setOption({
+    tooltip: { ...TOOLTIP, formatter: (p) => cityTooltip(p.name, jobs) },
+    grid: { left: 8, right: 40, top: 6, bottom: 6, containLabel: true },
+    xAxis: { type: "value", splitLine: SPLIT_LINE, axisLabel: AXIS_LABEL },
+    yAxis: {
+      type: "category", data: top.map(([k]) => k),
+      axisLine: { show: false }, axisTick: { show: false },
+      axisLabel: { ...AXIS_LABEL, color: C.ink2, fontSize: 12 },
     },
-    yAxis: { type: "value", splitLine: SPLIT_LINE, axisLabel: AXIS_LABEL },
     series: [{
-      type: "bar", barWidth: 22, cursor: "pointer",
-      data: counts.map(([k, v]) => ({
+      type: "bar", barWidth: 11, cursor: "pointer",
+      data: top.map(([k, v]) => ({
         name: k, value: v,
-        itemStyle: dimIf(state.region.size && !state.region.has(k), {
-          color: barGradient(C.teal, false), borderRadius: [4, 4, 0, 0],
+        itemStyle: dimIf(state.city.size && !state.city.has(k), {
+          color: barGradient(C.teal), borderRadius: [0, 4, 4, 0],
         }),
       })),
-      label: { show: true, position: "top", color: C.ink2, fontSize: 11.5, formatter: ({ value }) => fmtInt(value) },
+      label: { show: true, position: "right", color: C.ink2, fontSize: 11.5, formatter: ({ value }) => fmtInt(value) },
     }],
   }, true);
+  return withCity;
 }
 
-function regionTooltip(region, jobs) {
-  const sub = jobs.filter((j) => j.region_colombia === region);
+function cityTooltip(city, jobs) {
+  const sub = jobs.filter((j) => j.city === city);
   const sal = median(sub.map((j) => j.salary_mid_usd).filter((v) => v != null));
   const roles = [...countBy(sub, "role_canonical").entries()].sort((a, b) => b[1] - a[1]).slice(0, 2)
     .map(([r, n]) => `${r} (${n})`).join(", ");
-  return `<b>${escapeHtml(region)}</b><br>${fmtInt(sub.length)} ofertas<br>Salario mediano: ${sal ? fmtMoney(sal) : "s/d"}` +
+  const country = sub[0] ? sub[0].country : "";
+  return `<b>${escapeHtml(city)}</b> · ${escapeHtml(country)}<br>${fmtInt(sub.length)} ofertas<br>Salario mediano: ${sal ? fmtMoney(sal) : "s/d"}` +
     `<br>Top roles: ${roles || "—"}<br><span style="color:${C.ink3}">clic para filtrar</span>`;
+}
+
+/* --- 5b. Mapa coroplético por país --- */
+
+/* País (nombre en español, como viene en los datos) -> nombre en el GeoJSON */
+const COUNTRY_GEO_NAMES = {
+  "Colombia": "Colombia", "México": "Mexico", "Argentina": "Argentina",
+  "Brasil": "Brazil", "Chile": "Chile", "Perú": "Peru", "Ecuador": "Ecuador",
+  "Uruguay": "Uruguay", "Paraguay": "Paraguay", "Bolivia": "Bolivia",
+  "Venezuela": "Venezuela", "Costa Rica": "Costa Rica", "Panamá": "Panama",
+  "Guatemala": "Guatemala", "Honduras": "Honduras", "El Salvador": "El Salvador",
+  "Nicaragua": "Nicaragua", "Rep. Dominicana": "Dominican Republic",
+  "Puerto Rico": "Puerto Rico", "Estados Unidos": "United States of America",
+  "Canadá": "Canada", "España": "Spain", "Reino Unido": "United Kingdom",
+  "Alemania": "Germany", "India": "India",
+};
+const GEO_TO_ES = Object.fromEntries(Object.entries(COUNTRY_GEO_NAMES).map(([es, geo]) => [geo, es]));
+
+function renderMapChart(jobs) {
+  const counts = countBy(jobs, "country");
+  const data = [];
+  const unmappable = [];
+  for (const [es, n] of counts) {
+    const geo = COUNTRY_GEO_NAMES[es];
+    if (geo) data.push({ name: geo, value: n });
+    else unmappable.push([es, n]);
+  }
+  const max = Math.max(1, ...data.map((d) => d.value));
+  charts.mapChart.setOption({
+    tooltip: {
+      ...TOOLTIP,
+      formatter: (p) => {
+        const es = GEO_TO_ES[p.name];
+        if (!es || isNaN(p.value)) return null;
+        const sub = jobs.filter((j) => j.country === es);
+        const sal = median(sub.map((j) => j.salary_mid_usd).filter((v) => v != null));
+        const rem = sub.filter((j) => j.work_mode === "Remoto").length;
+        return `<b>${escapeHtml(es)}</b><br>${fmtInt(sub.length)} ofertas<br>` +
+          `Salario mediano: ${sal ? fmtMoney(sal) : "s/d"}<br>Remotas: ${fmtPct(sub.length ? rem / sub.length : 0)}` +
+          `<br><span style="color:${C.ink3}">clic para filtrar</span>`;
+      },
+    },
+    visualMap: {
+      min: 0, max, calculable: false,
+      orient: "horizontal", left: 10, bottom: 6,
+      inRange: { color: MAP_RAMP },
+      text: [fmtInt(max), "0"],
+      textStyle: { color: C.ink2, fontSize: 11 },
+    },
+    series: [{
+      type: "map", map: "world", roam: false, cursor: "pointer",
+      top: 10, bottom: 40,
+      itemStyle: { areaColor: "#1B1E19", borderColor: "#0B0C0A", borderWidth: 0.6 },
+      emphasis: { label: { show: false }, itemStyle: { areaColor: "#C3D695" } },
+      select: { disabled: true },
+      data,
+    }],
+  }, true);
+
+  const note = $("#map-note");
+  const dimmed = state.country.size
+    ? " · filtro de país activo: el mapa muestra el resto de filtros" : "";
+  note.textContent = unmappable.length
+    ? `Sin país mapeable: ${unmappable.sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} (${fmtInt(n)})`).join(" · ")}${dimmed}`
+    : dimmed.replace(" · ", "");
 }
 
 /* --- 6. Seniority --- */
@@ -565,7 +657,7 @@ function renderTrendChart(jobs) {
   charts.trendChart.setOption({
     tooltip: {
       ...TOOLTIP, trigger: "axis",
-      axisPointer: { type: "line", lineStyle: { color: "rgba(255,255,255,0.25)" } },
+      axisPointer: { type: "line", lineStyle: { color: "rgba(242,243,238,0.25)" } },
       formatter: (ps) => `<b>${ps[0].axisValue}</b><br>${fmtInt(ps[0].value[1])} ofertas publicadas`,
     },
     grid: { left: 8, right: 16, top: 14, bottom: 4, containLabel: true },
@@ -578,12 +670,12 @@ function renderTrendChart(jobs) {
     series: [{
       type: "line", smooth: 0.35, symbol: "circle", symbolSize: 8,
       data,
-      lineStyle: { width: 2, color: C.blue },
-      itemStyle: { color: C.blue, borderColor: "#101226", borderWidth: 2 },
+      lineStyle: { width: 2, color: C.green },
+      itemStyle: { color: C.green, borderColor: "#0B0C0A", borderWidth: 2 },
       areaStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: hexA(C.blue, 0.28) },
-          { offset: 1, color: hexA(C.blue, 0.02) },
+          { offset: 0, color: hexA(C.green, 0.28) },
+          { offset: 1, color: hexA(C.green, 0.02) },
         ]),
       },
     }],
@@ -642,7 +734,7 @@ function setEmpty(id, hasData, msg) {
     if (!ph) {
       ph = document.createElement("div");
       ph.className = "empty-msg";
-      ph.style.cssText = "position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(235,235,245,.35);font-size:13px;text-align:center;padding:0 30px;";
+      ph.style.cssText = "position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(242,243,238,.4);font-size:13px;text-align:center;padding:0 30px;";
       el.parentElement.style.position = "relative";
       el.parentElement.appendChild(ph);
     }
@@ -714,21 +806,40 @@ function renderInsights(jobs) {
       });
     }
 
-    const co = countBy(jobs, "region_colombia");
-    const coTotal = [...co.values()].reduce((a, b) => a + b, 0);
-    if (coTotal >= 10) {
-      const bog = co.get("Bogotá") || 0;
-      const med2 = co.get("Medellín / Antioquia") || 0;
-      const costa = co.get("Costa Caribe") || 0;
-      if (bog && costa) {
+    const geoCountries = [...countBy(jobs, "country").entries()]
+      .filter(([k]) => !k.includes("sin especificar"))
+      .sort((a, b) => b[1] - a[1]);
+    if (geoCountries.length >= 2) {
+      const [[c1, n1], [c2, n2]] = geoCountries;
+      out.push({
+        accent: C.violet,
+        html: `<b>${escapeHtml(c1)}</b> concentra la oferta con <span class="num">${fmtInt(n1)}</span> ofertas, seguido de ${escapeHtml(c2)} (${fmtInt(n2)}).`,
+      });
+    }
+
+    const cities = [...countBy(jobs, "city").entries()].sort((a, b) => b[1] - a[1]);
+    const withCity = cities.reduce((a, [, n]) => a + n, 0);
+    if (cities.length >= 2 && withCity >= 10) {
+      const [c1, n1] = cities[0];
+      out.push({
+        accent: C.teal,
+        html: `Entre las ofertas con ubicación, <b>${escapeHtml(c1)}</b> es la ciudad líder (<span class="num">${fmtInt(n1)}</span> de ${fmtInt(withCity)}). El ${fmtPct(1 - withCity / N)} de la selección no publica ciudad — típico de roles remotos.`,
+      });
+    }
+
+    if (salaried.length >= 10) {
+      let bestC = null;
+      for (const [es] of geoCountries) {
+        const vals = salaried.filter((j) => j.country === es).map((j) => j.salary_mid_usd);
+        if (vals.length >= 3) {
+          const m = median(vals);
+          if (!bestC || m > bestC.m) bestC = { es, m, n: vals.length };
+        }
+      }
+      if (bestC) {
         out.push({
-          accent: C.violet,
-          html: `En Colombia, <b>Bogotá</b> concentra <span class="num">${fmtInt(bog)}</span> ofertas vs ${fmtInt(med2)} en Medellín y ${fmtInt(costa)} en la Costa Caribe (${(bog / costa).toFixed(1)}× la Costa).`,
-        });
-      } else if (bog || med2) {
-        out.push({
-          accent: C.violet,
-          html: `En Colombia la oferta se concentra en <b>${bog >= med2 ? "Bogotá" : "Medellín"}</b> (<span class="num">${fmtInt(Math.max(bog, med2))}</span> ofertas de ${fmtInt(coTotal)}).`,
+          accent: C.orange,
+          html: `El país que mejor paga (con dato) es <b>${escapeHtml(bestC.es)}</b>: mediana de <span class="num">${fmtMoney(bestC.m)}</span> sobre ${bestC.n} ofertas.`,
         });
       }
     }
@@ -772,14 +883,19 @@ function renderTable(jobs) {
   tbody.innerHTML = "";
   for (const j of rows) {
     const tr = document.createElement("tr");
+    tr.style.cursor = "pointer";
+    tr.dataset.jobId = j.id;
     tr.innerHTML = `
-      <td><a href="${escapeHtml(j.job_url || "#")}" target="_blank" rel="noopener">${escapeHtml(j.title || "—")}</a></td>
+      <td><a href="${escapeHtml(j.job_url || "#")}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${escapeHtml(j.title || "—")}</a></td>
       <td>${escapeHtml(j.company || "—")}</td>
-      <td>${escapeHtml(j.region_colombia || j.country || "—")}</td>
+      <td>${escapeHtml(j.city ? `${j.city}, ${j.country}` : j.country || "—")}</td>
       <td><span class="tag">${escapeHtml(j.work_mode || "—")}</span></td>
       <td>${escapeHtml(j.seniority || "—")}</td>
       <td>${j.salary_mid_usd != null ? fmtMoney(j.salary_mid_usd) : "—"}</td>
       <td>${escapeHtml((j.date_posted || j.first_seen || "").slice(0, 10))}</td>`;
+    tr.addEventListener("click", () => {
+      if (typeof openJobModal === "function") openJobModal(j.id);
+    });
     tbody.appendChild(tr);
   }
 }
@@ -793,7 +909,8 @@ function refresh() {
   renderModeChart(filteredJobs("mode"));
   renderSkillsChart(filteredJobs("skill"));
   renderSkillSalaryChart(jobs);
-  renderRegionChart(filteredJobs("region"));
+  renderCityChart(filteredJobs("city"));
+  renderMapChart(filteredJobs("country"));
   renderSeniorityChart(filteredJobs("seniority"));
   renderExpChart(jobs);
   renderTrendChart(jobs);
@@ -807,21 +924,34 @@ function bindCrossFilter() {
     ["roleChart", (name) => toggle(state.role, name)],
     ["modeChart", (name) => toggle(state.mode, name)],
     ["skillsChart", (name) => toggle(state.skill, name)],
-    ["regionChart", (name) => toggle(state.region, name)],
+    ["cityChart", (name) => toggle(state.city, name)],
     ["seniorityChart", (name) => toggle(state.seniority, name)],
   ];
   for (const [id, fn] of map) {
     charts[id].on("click", (p) => fn(p.name));
   }
+  // El mapa entrega el nombre del GeoJSON; se traduce de vuelta al español
+  charts.mapChart.on("click", (p) => {
+    const es = GEO_TO_ES[p.name];
+    if (es) toggle(state.country, es);
+  });
 }
 
 function init() {
   $("#meta").textContent = RAW.generated_at
-    ? `${fmtInt(JOBS.length)} vacantes acumuladas · actualizado ${RAW.generated_at.slice(0, 10)}`
+    ? `Vacantes reales de LinkedIn para roles de data — filtra, compara y decide. Actualizado ${RAW.generated_at.slice(0, 10)}.`
     : "sin datos: corre el pipeline";
 
+  const nCountries = countBy(JOBS, "country").size;
+  const nCities = countBy(JOBS, "city").size;
+  $("#hero-stats").innerHTML = [
+    [JOBS.length, "vacantes"], [nCountries, "países"], [nCities, "ciudades"],
+  ].map(([n, l]) => `<span class="stat"><b>${fmtInt(n)}</b>${l}</span>`).join("");
+
+  if (window.WORLD_GEOJSON) echarts.registerMap("world", window.WORLD_GEOJSON);
+
   for (const id of ["roleChart", "modeChart", "skillsChart", "skillSalaryChart",
-    "regionChart", "seniorityChart", "expChart", "trendChart", "comboChart"]) {
+    "cityChart", "mapChart", "seniorityChart", "expChart", "trendChart", "comboChart"]) {
     initChart(id);
   }
   buildFilterBar();
@@ -833,6 +963,25 @@ function init() {
     clearTimeout(t);
     t = setTimeout(() => Object.values(charts).forEach((c) => c.resize()), 150);
   });
+
+  // Scroll-reveal for cards, insights, table
+  const revealEls = document.querySelectorAll(".card, .insights, .jobs-table");
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((e, i) => {
+        if (e.isIntersecting) {
+          // Stagger delay per card
+          const siblings = [...e.target.parentElement.children].filter(c => c.classList.contains("card"));
+          const idx = siblings.indexOf(e.target);
+          e.target.style.transitionDelay = `${idx * 60}ms`;
+          e.target.classList.add("visible");
+          observer.unobserve(e.target);
+        }
+      });
+    },
+    { threshold: 0.08, rootMargin: "0px 0px -20px 0px" }
+  );
+  revealEls.forEach((el) => observer.observe(el));
 }
 
 init();
