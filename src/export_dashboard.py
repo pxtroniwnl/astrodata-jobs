@@ -2,7 +2,6 @@
 
 import json
 import logging
-import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -12,8 +11,6 @@ log = logging.getLogger(__name__)
 
 DASHBOARD_DIR = Path(__file__).resolve().parent.parent / "dashboard"
 
-# Campos que necesita el frontend; la descripción se excluye para que
-# data.js no pese decenas de MB.
 EXPORT_COLUMNS = [
     "id", "title", "company", "location", "country", "city", "region_colombia",
     "work_mode", "role_canonical", "seniority", "years_experience",
@@ -22,7 +19,7 @@ EXPORT_COLUMNS = [
 ]
 
 
-def export_data_js(conn: sqlite3.Connection) -> Path:
+def export_data_js(conn) -> Path:
     df = pd.read_sql(f"SELECT {', '.join(EXPORT_COLUMNS)} FROM jobs", conn)
     df["skills"] = df["skills"].map(lambda s: json.loads(s) if s else [])
     records = df.astype(object).where(pd.notna(df), None).to_dict(orient="records")

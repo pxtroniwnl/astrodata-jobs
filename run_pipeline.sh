@@ -8,6 +8,11 @@ LOG_FILE="$LOG_DIR/pipeline_$(date +%Y-%m-%d_%H%M).log"
 
 mkdir -p "$LOG_DIR"
 
+# Load DATABASE_URL from .env if present
+if [ -f "$PROJECT_DIR/.env" ]; then
+  export $(grep -v '^#' "$PROJECT_DIR/.env" | xargs)
+fi
+
 echo "=== astro-data jobs pipeline — $(date) ===" | tee "$LOG_FILE"
 cd "$PROJECT_DIR"
 uv run python -m src.main 2>&1 | tee -a "$LOG_FILE"

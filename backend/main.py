@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import json
-import sqlite3
+import os
 from pathlib import Path
 
+import psycopg2
+import psycopg2.extras
 from fastapi import Body, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -27,23 +29,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-DB_PATH = Path(__file__).resolve().parent.parent / "data" / "jobs.db"
 
-
-def _get_db() -> sqlite3.Connection:
-    if not DB_PATH.exists():
-        raise HTTPException(503, "Base de datos no disponible. Ejecuta el pipeline primero.")
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.row_factory = sqlite3.Row
-    return conn
+def _get_db():
+    url = os.environ.get("DATABASE_URL")
+    if not url:
+        raise HTTPException(503, "DATABASE_URL no configurada en el servidor.")
+    try:
+        conn = psycopg2.connect(url)
+        conn.autocommit = False
+        return conn
+    except Exception as e:
+        raise HTTPException(503, f"Error conectando a la base de datos: {e}")
 
 
 @app.get("/api/job/{job_id}")
 def get_job(job_id: str) -> JobDetail:
-    """Get full job details including description."""
     conn = _get_db()
     try:
-        row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT * FROM jobs WHERE id = %s", (job_id,))
+        row = cur.fetchone()
         if not row:
             raise HTTPException(404, f"Vacante {job_id} no encontrada")
         skills = json.loads(row["skills"]) if row["skills"] else []
@@ -74,20 +79,19 @@ async def api_tailor_cv(
     file: UploadFile = File(...),
     job_id: str = Form(...),
 ) -> TailorResponse:
-    """Upload a CV file and get tailored analysis for a specific job."""
     if not file.filename:
         raise HTTPException(400, "No se proporcionó archivo")
 
-    # Read job from DB
     conn = _get_db()
     try:
-        row = conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute("SELECT * FROM jobs WHERE id = %s", (job_id,))
+        row = cur.fetchone()
         if not row:
             raise HTTPException(404, f"Vacante {job_id} no encontrada")
     finally:
         conn.close()
 
-    # Parse CV
     cv_bytes = await file.read()
     try:
         cv_text = extract_text(cv_bytes, file.filename)
@@ -97,10 +101,8 @@ async def api_tailor_cv(
     if len(cv_text.strip()) < 50:
         raise HTTPException(400, "El CV parece estar vacío o no se pudo extraer texto.")
 
-    # Parse skills from DB
     skills = json.loads(row["skills"]) if row["skills"] else []
 
-    # Call Gemini
     try:
         result = tailor_cv(
             cv_text=cv_text,
@@ -127,7 +129,6 @@ def api_contacts(
     company: str = Body(..., embed=True),
     job_title: str = Body(..., embed=True),
 ) -> ContactResponse:
-    """Get LinkedIn contact search URLs and outreach tips for a company."""
     search_urls = build_linkedin_search_urls(company)
     tips = build_outreach_tips(company, job_title)
     checklist = get_networking_checklist()
@@ -142,7 +143,7 @@ def api_contacts(
     )
 
 
-# Serve dashboard static files
+# Serve dashboard static files (only in local dev)
 DASHBOARD_DIR = Path(__file__).resolve().parent.parent / "dashboard"
-if DASHBOARD_DIR.exists():
+if DASHBOARD_DIR.exists() and not os.environ.get("RAILWAY_STATIC_URL"):
     app.mount("/", StaticFiles(directory=str(DASHBOARD_DIR), html=True), name="dashboard")

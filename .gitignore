@@ -7,3 +7,10 @@ dashboard/data.js
 .venv/
 __pycache__/
 *.pyc
+
+# Environment secrets
+.env
+
+# Deployment
+.vercel/
+.railway/
