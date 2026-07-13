@@ -105,12 +105,12 @@ _COMPILED_SKILLS = {
 
 # Rol canónico: se evalúan en orden, gana el primero que matchee el título
 ROLE_RULES: list[tuple[str, str]] = [
-    ("ML/AI Engineer", r"machine learning|ml engineer|mlops|ai engineer|\bai agent\b|agentic|artificial intelligence|inteligencia artificial|deep learning|llm|genai|gen ai"),
+    ("ML/AI Engineer", r"machine learning|ml engineer|mlops|ai engineer|\bai agent\b|agentic|artificial intelligence|inteligencia artificial|deep learning|computer vision|llm|genai|gen ai"),
     ("Analytics Engineer", r"analytics engineer"),
-    ("Data Engineer", r"data engineer|data software engineer|ingenier[oa]? de datos|ingenier[ií]a de datos|etl developer|big data"),
+    ("Data Engineer", r"data engineer|data software engineer|ingenier[oa]? de datos|ingenier[ií]a de datos|etl developer|big data|database (?:engineer|administrator|developer)"),
     ("Data Scientist", r"data scien|cient[ií]fic[oa]? de datos|ciencia de datos"),
     ("BI", r"business intelligence|\bbi\b|power ?bi|inteligencia de negocios"),
-    ("Data Analyst", r"data analyst|analista de datos|an[aá]lisis de datos|analytics analyst|data analytics|insights? analyst"),
+    ("Data Analyst", r"data analyst|analista de datos|an[aá]lisis de datos|analytics analyst|data analytics|insights? analyst|product analyst|analytics specialist"),
     ("Data Architect", r"data architect|arquitect[oa] de datos"),
 ]
 _COMPILED_ROLES = [(name, re.compile(pat, re.IGNORECASE)) for name, pat in ROLE_RULES]
@@ -127,7 +127,7 @@ _YEARS_ES_RE = re.compile(r"experiencia\s+(?:m[ií]nima\s+)?(?:de\s+)?(\d{1,2})\
 
 # Regiones de Colombia por ciudad/departamento en el campo location
 COLOMBIA_REGIONS: list[tuple[str, str]] = [
-    ("Bogotá", r"bogot|cundinamarca|cha[ií]a|soacha|zipaquir"),
+    ("Bogotá", r"bogot|cundinamarca|capital district|cha[ií]a|soacha|zipaquir"),
     ("Medellín / Antioquia", r"medell|antioquia|envigado|itag[uü]|sabaneta|rionegro|bello"),
     ("Costa Caribe", r"barranquilla|cartagena|santa marta|monter[ií]a|sincelejo|valledupar|riohacha|soledad|atl[aá]ntico|bol[ií]var|magdalena|c[oó]rdoba|cesar|guajira|sucre"),
     ("Cali / Valle", r"\bcali\b|valle del cauca|palmira|yumbo|buenaventura"),
@@ -233,11 +233,13 @@ def colombia_region(location: str, country: str, work_mode: str) -> str | None:
     return "Otras regiones"
 
 
-def work_mode(is_remote, location: str, title: str, description: str) -> str:
+def work_mode(is_remote, location: str, title: str, description: str, remote_search: bool) -> str:
+    """`remote_search`: la oferta salió de una búsqueda con filtro remoto de
+    LinkedIn, así que es remota aunque el texto no lo diga."""
     blob = f"{location or ''} {title or ''}"
     if _HYBRID_RE.search(blob) or _HYBRID_RE.search(description or ""):
         return "Híbrido"
-    if (is_remote and int(is_remote) == 1) or _REMOTE_RE.search(blob):
+    if (is_remote and int(is_remote) == 1) or remote_search or _REMOTE_RE.search(blob):
         return "Remoto"
     return "Presencial"
 
@@ -275,6 +277,9 @@ def enrich_all(conn: sqlite3.Connection, config: dict) -> int:
         return 0
 
     fx = config["fx_to_usd"]
+    remote_locations = {
+        loc["name"] for loc in config.get("locations", []) if loc.get("is_remote")
+    }
     updates = []
     for _, row in df.iterrows():
         title = row["title"] or ""
@@ -285,7 +290,10 @@ def enrich_all(conn: sqlite3.Connection, config: dict) -> int:
         role = canonical_role(title)
         years = extract_years(text)
         sen = seniority(title, desc, years)
-        mode = work_mode(row["is_remote"], row["location"], title, desc)
+        mode = work_mode(
+            row["is_remote"], row["location"], title, desc,
+            row["search_location"] in remote_locations,
+        )
         country = infer_country(row["location"], row["search_location"])
         region = colombia_region(row["location"], country, mode)
         lo, hi, mid = salary_usd(row, fx)
