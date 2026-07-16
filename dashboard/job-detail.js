@@ -1,9 +1,9 @@
 /* astro-data jobs — Job Detail Modal logic */
 "use strict";
 
-const API_BASE = window.location.port === "8000"
-  ? `http://localhost:8000`
-  : "";
+/* Rutas relativas: en local el backend FastAPI sirve el dashboard en :8000,
+   y en producción Vercel reescribe /api/* hacia el backend en Railway. */
+const API_BASE = "";
 
 let _currentJobId = null;
 
@@ -34,12 +34,10 @@ async function loadJobDetail(jobId) {
 
   // Try API first, fall back to local data
   let job = null;
-  if (API_BASE) {
-    try {
-      const res = await fetch(`${API_BASE}/api/job/${jobId}`);
-      if (res.ok) job = await res.json();
-    } catch (e) { /* fallback to local */ }
-  }
+  try {
+    const res = await fetch(`${API_BASE}/api/job/${jobId}`);
+    if (res.ok) job = await res.json();
+  } catch (e) { /* fallback to local */ }
 
   if (!job) {
     const raw = window.JOBS_DATA || { jobs: [] };
@@ -159,19 +157,6 @@ async function handleCvUpload(file) {
   const result = document.getElementById("cv-tailor-result");
   result.innerHTML = `<div class="modal-loading"><div class="spinner"></div><span class="loading-text">Analizando tu CV contra la vacante... esto puede tomar 15-30 segundos</span></div>`;
 
-  if (!API_BASE) {
-    result.innerHTML = `
-      <div style="padding:20px;text-align:center;color:var(--ink-3, #757a6e);font-size:13px;">
-        <p style="margin-bottom:10px;color:var(--ink-2, #a9aea2);font-weight:600;">Backend no disponible</p>
-        <p>Para usar el tailoring de CV, inicia el servidor backend:</p>
-        <code style="display:block;margin-top:10px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;font-size:12px;color:var(--sage, #71963b);">
-          uvicorn backend.main:app --reload
-        </code>
-        <p style="margin-top:10px;">Y asegúrate de tener la variable GEMINI_API_KEY configurada.</p>
-      </div>`;
-    return;
-  }
-
   const formData = new FormData();
   formData.append("file", file);
   formData.append("job_id", _currentJobId);
@@ -185,6 +170,19 @@ async function handleCvUpload(file) {
     const data = await res.json();
     renderTailorResult(data);
   } catch (e) {
+    if (e instanceof TypeError) {
+      // Fallo de red: el backend no está corriendo / no es alcanzable
+      result.innerHTML = `
+        <div style="padding:20px;text-align:center;color:var(--ink-3, #757a6e);font-size:13px;">
+          <p style="margin-bottom:10px;color:var(--ink-2, #a9aea2);font-weight:600;">Backend no disponible</p>
+          <p>Para usar el tailoring de CV, inicia el servidor backend:</p>
+          <code style="display:block;margin-top:10px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;font-size:12px;color:var(--sage, #71963b);">
+            uvicorn backend.main:app --reload
+          </code>
+          <p style="margin-top:10px;">Y asegúrate de tener la variable GEMINI_API_KEY configurada.</p>
+        </div>`;
+      return;
+    }
     result.innerHTML = `<div style="padding:20px;color:var(--rust, #c05e2f);font-size:13px;">
       <strong>Error:</strong> ${esc(e.message)}
     </div>`;
@@ -249,13 +247,6 @@ function renderTailorResult(data) {
 async function findContacts(company, jobTitle) {
   const result = document.getElementById("contacts-result");
   result.innerHTML = `<div class="modal-loading"><div class="spinner"></div><span class="loading-text">Buscando contactos...</span></div>`;
-
-  if (!API_BASE) {
-    // Build URLs client-side (no backend needed)
-    const urls = buildSearchUrls(company);
-    renderContactsResult({ company, search_urls: urls, outreach_tips: getDefaultTips(company, jobTitle), networking_checklist: getDefaultChecklist() });
-    return;
-  }
 
   try {
     const res = await fetch(`${API_BASE}/api/contacts`, {

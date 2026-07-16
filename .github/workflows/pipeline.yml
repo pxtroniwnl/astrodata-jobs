@@ -1,0 +1,49 @@
+name: pipeline
+
+on:
+  schedule:
+    - cron: "0 */2 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: pipeline
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Instalar dependencias
+        run: uv sync --frozen
+
+      - name: Correr pipeline
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: uv run python -m src.main
+
+      - name: Commitear data.js si las vacantes cambiaron
+        run: |
+          # generated_at cambia en cada corrida; se ignora para no commitear sin cambios reales
+          strip_ts() { sed -E 's/"generated_at": ?"[^"]*"//'; }
+          git show HEAD:dashboard/data.js 2>/dev/null | strip_ts > /tmp/data_old.js || true
+          strip_ts < dashboard/data.js > /tmp/data_new.js
+          if cmp -s /tmp/data_old.js /tmp/data_new.js; then
+            echo "Sin vacantes nuevas; no se commitea data.js"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dashboard/data.js
+          git commit -m "data: actualización automática de vacantes"
+          git pull --rebase origin main
+          git push

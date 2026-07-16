@@ -123,6 +123,7 @@ def upsert_jobs(conn, jobs: pd.DataFrame) -> tuple[int, int]:
 
 
 def export_tables(conn) -> pd.DataFrame:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
     df = pd.read_sql("SELECT * FROM jobs", conn)
     df.to_parquet(DATA_DIR / "jobs.parquet", index=False)
     df.to_csv(DATA_DIR / "jobs.csv", index=False)

@@ -28,7 +28,7 @@ precisión que un astrónomo navega las estrellas.
 config.yaml ──> src/scraper.py (jobspy → LinkedIn)
                      │  matriz términos × ubicaciones, pausas anti-bloqueo
                      ▼
-               src/storage.py (SQLite data/jobs.db)
+               src/storage.py (PostgreSQL — Neon, vía DATABASE_URL)
                      │  dedup por job id, first_seen / last_seen
                      ▼
                src/enrich.py
@@ -49,8 +49,8 @@ El backend FastAPI ofrece 3 endpoints para la funcionalidad de AI:
 # Instalar dependencias
 uv sync
 
-# Arrancar el backend
-GEMINI_API_KEY="tu-api-key" uv run uvicorn backend.main:app --port 8000
+# Arrancar el backend (necesita la BD y la API key de Gemini)
+DATABASE_URL="postgresql://..." GEMINI_API_KEY="tu-api-key" uv run uvicorn backend.main:app --port 8000
 
 # Abrir dashboard (se conecta automáticamente al backend)
 open http://localhost:8000
@@ -68,6 +68,9 @@ open http://localhost:8000
 **Contactos**: Dado el ID de una vacante, genera URLs de búsqueda LinkedIn + checklist de outreach.
 
 ## Uso del pipeline
+
+El pipeline necesita `DATABASE_URL` apuntando a la base Postgres (Neon) —
+ver `.env.example`.
 
 ```bash
 # Corrida diaria manual (vacantes de las últimas 24 h)
@@ -111,27 +114,44 @@ astrodata-jobs/
 └── CONTRIBUTING.md          # Guía de contribución
 ```
 
-## Corrida automática (cron)
+## Corrida automática (GitHub Actions)
 
-Configurado para ejecutarse **cada 2 horas** automáticamente:
+El workflow `.github/workflows/pipeline.yml` corre el pipeline **cada 2 horas**
+en la nube (también se puede lanzar a mano desde la pestaña Actions):
 
-```cron
-0 */2 * * * /home/pxtroniwnl/Documents/projects/personal/portfolio/astrodata-jobs/run_pipeline.sh
+1. Scrapea LinkedIn y actualiza la base Postgres en Neon.
+2. Regenera `dashboard/data.js` y, si hay vacantes nuevas, lo commitea —
+   eso dispara el redeploy automático del dashboard en Vercel.
+
+Requiere el secret `DATABASE_URL` en el repo de GitHub
+(Settings → Secrets and variables → Actions).
+
+Para corridas locales sigue disponible `run_pipeline.sh` (loguea a
+`logs/pipeline_YYYY-MM-DD_HHMM.log` y limpia logs de más de 30 días).
+
+## Deploy
+
+```
+GitHub Actions (cada 2h) ──> Neon (PostgreSQL)
+        │ commit data.js            ▲
+        ▼                           │ DATABASE_URL
+Vercel (dashboard estático) ──/api/*──> Railway (backend FastAPI)
 ```
 
-El script `run_pipeline.sh`:
-- Ejecuta el pipeline y loguea a `logs/pipeline_YYYY-MM-DD_HHMM.log`
-- Limpia automáticamente logs de más de 30 días
-
-Para ver el cron actual: `crontab -l`
-Para desactivar: `crontab -r`
+- **Vercel** sirve `dashboard/**` como sitio estático y reescribe `/api/*`
+  hacia el backend en Railway (`vercel.json`).
+- **Railway** corre el backend FastAPI (`railway.json` + `backend/Dockerfile`).
+  Variables requeridas: `DATABASE_URL` y `GEMINI_API_KEY`. Si el dominio
+  público difiere del configurado en `vercel.json`, actualizar el rewrite.
+- **Neon** aloja la base Postgres consolidada.
 
 ## Estructura de datos
 
-- `data/jobs.db` — SQLite consolidado; una fila por vacante única, con
+- Tabla `jobs` en Postgres (Neon) — una fila por vacante única, con
   `first_seen`/`last_seen` para medir permanencia.
-- `data/jobs.parquet` / `data/jobs.csv` — export plano para análisis con pandas.
+- `data/jobs.parquet` / `data/jobs.csv` — export plano local para análisis con pandas.
 - `data/raw/*.parquet` — snapshot crudo de cada corrida.
+- `dashboard/data.js` — export para el dashboard (versionado; lo actualiza el workflow).
 
 ## Contribuir
 
