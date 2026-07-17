@@ -10,7 +10,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "https://astrodata-jobs-backend.up.railway.app/api/$1"
+      "dest": "https://astrodata-jobs-production.up.railway.app/api/$1"
     },
     {
       "src": "/(.*)",
