@@ -17,6 +17,7 @@ class TailorResponse(BaseModel):
     strengths: list[str]
     recommendations: list[str]
     keywords_to_add: list[str]
+    cv_struct: dict | None = None
 
 
 class ContactRequest(BaseModel):

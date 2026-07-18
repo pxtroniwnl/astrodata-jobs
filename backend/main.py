@@ -3,12 +3,13 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 
 import psycopg2
 import psycopg2.extras
 from dotenv import load_dotenv
-from fastapi import Body, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Body, FastAPI, File, Form, HTTPException, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -18,6 +19,7 @@ from backend.contacts_scraper import (
     get_networking_checklist,
 )
 from backend.cv_parser import extract_text
+from backend.cv_pdf import build_harvard_pdf, validate_cv_struct
 from backend.cv_tailor import tailor_cv
 from backend.models import ContactResponse, JobDetail, TailorResponse
 
@@ -124,6 +126,27 @@ async def api_tailor_cv(
         strengths=result.get("strengths", []),
         recommendations=result.get("recommendations", []),
         keywords_to_add=result.get("keywords_to_add", []),
+        cv_struct=result.get("cv_struct"),
+    )
+
+
+@app.post("/api/cv-pdf")
+def api_cv_pdf(
+    cv_struct: dict = Body(..., embed=True),
+    company: str = Body("", embed=True),
+) -> Response:
+    struct = validate_cv_struct(cv_struct)
+    if not struct:
+        raise HTTPException(400, "Estructura de CV inválida o incompleta.")
+    try:
+        pdf_bytes = build_harvard_pdf(struct)
+    except Exception as e:
+        raise HTTPException(500, f"No se pudo generar el PDF: {e}")
+    slug = re.sub(r"[^A-Za-z0-9]+", "_", company).strip("_")[:40] or "vacante"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="CV_Optimizado_{slug}.pdf"'},
     )
 
 

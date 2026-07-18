@@ -8,6 +8,8 @@ import time
 from google import genai
 from google.genai import types
 
+from backend.cv_pdf import struct_to_text, validate_cv_struct
+
 MODELS = ["gemini-3-flash-preview", "gemini-2.0-flash", "gemini-2.0-flash-001"]
 
 SYSTEM_PROMPT = """\
@@ -19,7 +21,21 @@ Responde SIEMPRE con JSON válido con esta estructura exacta:
 {
   "match_score": 75,
   "summary": "Breve resumen del match entre el CV y la vacante",
-  "tailored_cv": "CV optimizado reestructurado para esta vacante específica, manteniendo la info real del candidato pero reordenando y enfatizando lo relevante",
+  "cv_struct": {
+    "name": "NOMBRE COMPLETO",
+    "contact": "email | teléfono | ciudad | linkedin",
+    "sections": [
+      {"title": "Perfil", "type": "paragraph", "content": "..."},
+      {"title": "Experiencia", "type": "entries", "entries": [
+        {"heading": "Cargo — Empresa", "meta": "Ciudad · 2022–Presente",
+         "bullets": ["logro cuantificado con keywords de la vacante"]}
+      ]},
+      {"title": "Educación", "type": "entries", "entries": [
+        {"heading": "Título — Institución", "meta": "2018–2022", "bullets": []}
+      ]},
+      {"title": "Competencias", "type": "paragraph", "content": "Grupo: a, b, c"}
+    ]
+  },
   "missing_skills": ["skill1", "skill2"],
   "strengths": ["fortaleza1", "fortaleza2"],
   "recommendations": [
@@ -31,12 +47,32 @@ Responde SIEMPRE con JSON válido con esta estructura exacta:
 
 Reglas:
 - match_score: 0-100, basado en skills, experiencia y seniority
-- tailored_cv: reescribe el CV completo optimizado para esta vacante, en el mismo idioma del CV original
+- cv_struct: el CV completo optimizado, estructurado para maquetar en UNA página:
+  - ESCRÍBELO EN EL IDIOMA DE LA DESCRIPCIÓN DE LA VACANTE (vacante en inglés → CV en inglés).
+  - Usa SOLO información real del CV original: reformula y reordena con los términos
+    de la vacante, integra keywords defendibles en Competencias, pero NUNCA inventes
+    empleos, proyectos, títulos ni skills que el candidato no tenga. Las skills que
+    le faltan van solo en missing_skills/recommendations, no en el CV.
+  - Conserva los datos de contacto del CV original en "contact".
+  - Sé conciso: máximo 4 bullets por empleo, para que quepa en una página.
+  - Los títulos de sección también en el idioma de la vacante.
 - missing_skills: skills que pide la vacante y no están en el CV
 - strengths: qué del CV coincide bien con la vacante
 - recommendations: 3-5 acciones concretas para mejorar la aplicación
 - keywords_to_add: palabras clave del ATS que deberían aparecer en el CV
 """
+
+
+def _finalize(parsed: dict) -> dict:
+    """Valida cv_struct y deriva de él el texto plano que muestra la UI."""
+    struct = validate_cv_struct(parsed.get("cv_struct"))
+    if struct:
+        parsed["cv_struct"] = struct
+        parsed["tailored_cv"] = struct_to_text(struct)
+    else:
+        parsed["cv_struct"] = None
+        parsed.setdefault("tailored_cv", "")
+    return parsed
 
 
 def tailor_cv(cv_text: str, job_title: str, job_description: str, job_skills: list[str]) -> dict:
@@ -70,20 +106,22 @@ Analiza el CV contra esta vacante y devuelve el JSON con el análisis estructura
                 config=types.GenerateContentConfig(
                     system_instruction=SYSTEM_PROMPT,
                     temperature=0.3,
-                    max_output_tokens=4096,
+                    max_output_tokens=8192,
                     response_mime_type="application/json",
                 ),
             )
 
             raw = response.text
             try:
-                return json.loads(raw)
+                parsed = json.loads(raw)
             except json.JSONDecodeError:
                 start = raw.find("{")
                 end = raw.rfind("}") + 1
                 if start >= 0 and end > start:
-                    return json.loads(raw[start:end])
-                raise RuntimeError(f"No se pudo parsear la respuesta del LLM: {raw[:200]}")
+                    parsed = json.loads(raw[start:end])
+                else:
+                    raise RuntimeError(f"No se pudo parsear la respuesta del LLM: {raw[:200]}")
+            return _finalize(parsed)
         except Exception as e:
             last_error = e
             if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
