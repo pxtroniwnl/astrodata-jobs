@@ -7,6 +7,7 @@ from pathlib import Path
 
 import psycopg2
 import psycopg2.extras
+from dotenv import load_dotenv
 from fastapi import Body, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -19,6 +20,8 @@ from backend.contacts_scraper import (
 from backend.cv_parser import extract_text
 from backend.cv_tailor import tailor_cv
 from backend.models import ContactResponse, JobDetail, TailorResponse
+
+load_dotenv()
 
 app = FastAPI(title="astro-data jobs API", version="0.1.0")
 

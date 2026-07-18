@@ -161,32 +161,54 @@ async function handleCvUpload(file) {
   formData.append("file", file);
   formData.append("job_id", _currentJobId);
 
+  let res;
   try {
-    const res = await fetch(`${API_BASE}/api/tailor-cv`, { method: "POST", body: formData });
+    res = await fetch(`${API_BASE}/api/tailor-cv`, { method: "POST", body: formData });
+  } catch (e) {
+    // Fallo de red: el backend no está corriendo / no es alcanzable / se cortó la conexión
+    result.innerHTML = renderBackendUnavailable();
+    return;
+  }
+
+  try {
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: "Error desconocido" }));
-      throw new Error(err.detail || `HTTP ${res.status}`);
+      let detail = "";
+      try {
+        const err = await res.json();
+        detail = err.detail || "";
+      } catch (_) {
+        detail = (await res.text().catch(() => "")).slice(0, 200);
+      }
+      throw new Error(detail || `El servidor respondió con un error (HTTP ${res.status}). Intenta de nuevo.`);
     }
     const data = await res.json();
     renderTailorResult(data);
   } catch (e) {
-    if (e instanceof TypeError) {
-      // Fallo de red: el backend no está corriendo / no es alcanzable
-      result.innerHTML = `
-        <div style="padding:20px;text-align:center;color:var(--ink-3, #757a6e);font-size:13px;">
-          <p style="margin-bottom:10px;color:var(--ink-2, #a9aea2);font-weight:600;">Backend no disponible</p>
-          <p>Para usar el tailoring de CV, inicia el servidor backend:</p>
-          <code style="display:block;margin-top:10px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;font-size:12px;color:var(--sage, #71963b);">
-            uvicorn backend.main:app --reload
-          </code>
-          <p style="margin-top:10px;">Y asegúrate de tener la variable GEMINI_API_KEY configurada.</p>
-        </div>`;
-      return;
-    }
     result.innerHTML = `<div style="padding:20px;color:var(--rust, #c05e2f);font-size:13px;">
       <strong>Error:</strong> ${esc(e.message)}
     </div>`;
   }
+}
+
+function renderBackendUnavailable() {
+  const isLocal = ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
+  if (isLocal) {
+    return `
+      <div style="padding:20px;text-align:center;color:var(--ink-3, #757a6e);font-size:13px;">
+        <p style="margin-bottom:10px;color:var(--ink-2, #a9aea2);font-weight:600;">Backend no disponible</p>
+        <p>Para usar el tailoring de CV, inicia el servidor backend:</p>
+        <code style="display:block;margin-top:10px;padding:10px;background:rgba(255,255,255,0.05);border-radius:8px;font-size:12px;color:var(--sage, #71963b);">
+          uvicorn backend.main:app --reload
+        </code>
+        <p style="margin-top:10px;">Y asegúrate de tener la variable GEMINI_API_KEY configurada.</p>
+      </div>`;
+  }
+  return `
+    <div style="padding:20px;text-align:center;color:var(--ink-3, #757a6e);font-size:13px;">
+      <p style="margin-bottom:10px;color:var(--ink-2, #a9aea2);font-weight:600;">No se pudo conectar con el servidor</p>
+      <p>Puede ser un problema temporal de conexión o el análisis tardó demasiado.</p>
+      <p style="margin-top:10px;">Vuelve a subir tu CV para intentarlo de nuevo.</p>
+    </div>`;
 }
 
 function renderTailorResult(data) {
