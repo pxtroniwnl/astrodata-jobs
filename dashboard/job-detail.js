@@ -6,6 +6,7 @@
 const API_BASE = "";
 
 let _currentJobId = null;
+let _currentJob = null;
 
 /* ---- Modal open/close ---- */
 function openJobModal(jobId) {
@@ -60,6 +61,7 @@ async function loadJobDetail(jobId) {
 }
 
 function renderJobInfo(job) {
+  _currentJob = job;
   const body = document.getElementById("modal-job-body");
   const skills = (job.skills || []).map((s) => `<span class="skill-tag">${esc(s)}</span>`).join("");
   const salary = job.salary_mid_usd
@@ -256,6 +258,13 @@ function renderTailorResult(data) {
       <h4 style="font-size:13px;font-weight:650;margin:20px 0 8px;color:var(--ink, #f2f3ee);">CV Optimizado</h4>
       <div class="tailored-cv-box">${esc(data.tailored_cv)}</div>
     ` : ""}
+
+    ${data.cv_struct ? `
+      <button id="btn-download-cv" style="width:100%;margin-top:12px;padding:13px;border-radius:12px;border:1px solid var(--line, rgba(255,255,255,0.09));background:rgba(113,150,59,0.12);color:var(--sage, #71963b);font:inherit;font-size:14px;font-weight:600;cursor:pointer;">
+        ⬇ Descargar CV Optimizado (PDF)
+      </button>
+      <div id="cv-download-error"></div>
+    ` : ""}
   `;
 
   // Animate gauge
@@ -263,6 +272,43 @@ function renderTailorResult(data) {
     const fg = result.querySelector(".fg");
     if (fg) fg.style.strokeDashoffset = dashOffset;
   });
+
+  const dlBtn = result.querySelector("#btn-download-cv");
+  if (dlBtn) dlBtn.addEventListener("click", () => downloadTailoredPdf(data.cv_struct, dlBtn));
+}
+
+async function downloadTailoredPdf(cvStruct, btn) {
+  const errBox = document.getElementById("cv-download-error");
+  errBox.innerHTML = "";
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Generando PDF...";
+  const company = (_currentJob && _currentJob.company) || "vacante";
+  try {
+    const res = await fetch(`${API_BASE}/api/cv-pdf`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cv_struct: cvStruct, company }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `CV_Optimizado_${company.replace(/[^\w]+/g, "_")}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    errBox.innerHTML = `<div style="padding:10px;color:var(--rust, #c05e2f);font-size:13px;"><strong>Error:</strong> ${esc(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
 }
 
 /* ---- Contacts ---- */
