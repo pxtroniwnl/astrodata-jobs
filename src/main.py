@@ -47,6 +47,12 @@ def main() -> None:
         jobs, ok, failed = scraper.run_searches(
             config, hours_old=hours_old, limit=args.limit, results_wanted=args.results
         )
+        # Neon cierra conexiones inactivas (~5 min) y el scraping puede tardar más de una hora
+        try:
+            conn.close()
+        except Exception:
+            pass
+        conn = storage.connect()
         if not jobs.empty:
             snapshot = storage.save_raw_snapshot(jobs)
             log.info("Snapshot crudo: %s (%d filas)", snapshot, len(jobs))

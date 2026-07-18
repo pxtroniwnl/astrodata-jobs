@@ -350,13 +350,14 @@ def enrich_all(conn, config: dict) -> int:
 
     from psycopg2.extras import execute_batch
 
-    execute_batch(
-        conn,
-        """UPDATE jobs SET role_canonical=%s, seniority=%s, years_experience=%s,
-           skills=%s, country=%s, city=%s, region_colombia=%s, work_mode=%s,
-           salary_min_usd=%s, salary_max_usd=%s, salary_mid_usd=%s WHERE id=%s""",
-        updates,
-        page_size=500,
-    )
+    with conn.cursor() as cur:
+        execute_batch(
+            cur,
+            """UPDATE jobs SET role_canonical=%s, seniority=%s, years_experience=%s,
+               skills=%s, country=%s, city=%s, region_colombia=%s, work_mode=%s,
+               salary_min_usd=%s, salary_max_usd=%s, salary_mid_usd=%s WHERE id=%s""",
+            updates,
+            page_size=500,
+        )
     conn.commit()
     return len(updates)
