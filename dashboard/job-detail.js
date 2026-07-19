@@ -215,8 +215,19 @@ function renderBackendUnavailable() {
 
 function renderTailorResult(data) {
   const result = document.getElementById("cv-tailor-result");
-  const scoreColor = data.match_score >= 70 ? "#71963b" : data.match_score >= 40 ? "#a8862e" : "#c05e2f";
+  const colorFor = (s) => (s >= 70 ? "#71963b" : s >= 40 ? "#a8862e" : "#c05e2f");
+  const scoreColor = colorFor(data.match_score);
   const dashOffset = 226 - (226 * data.match_score) / 100;
+  const hasNewScore = data.optimized_score != null;
+
+  const newScoreHtml = hasNewScore ? `
+    <div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(113,150,59,0.08);border:1px solid var(--line, rgba(255,255,255,0.09));">
+      <span style="font-size:12px;color:var(--ink-2, #a9aea2);">Match actual</span>
+      <span style="font-size:16px;font-weight:700;color:${scoreColor};">${data.match_score}%</span>
+      <span style="color:var(--ink-3, #7a7f73);">→</span>
+      <span style="font-size:12px;color:var(--ink-2, #a9aea2);">Con el CV optimizado</span>
+      <span style="font-size:20px;font-weight:700;color:${colorFor(data.optimized_score)};">${data.optimized_score}%</span>
+    </div>` : "";
 
   const missingHtml = (data.missing_skills || []).map((s) => `<li>${esc(s)}</li>`).join("");
   const strengthsHtml = (data.strengths || []).map((s) => `<li>${esc(s)}</li>`).join("");
@@ -236,6 +247,7 @@ function renderTailorResult(data) {
       </div>
       <div class="score-info">
         <div class="summary">${esc(data.summary)}</div>
+        ${newScoreHtml}
       </div>
     </div>
 

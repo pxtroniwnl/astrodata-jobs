@@ -11,6 +11,7 @@ class TailorRequest(BaseModel):
 
 class TailorResponse(BaseModel):
     match_score: int
+    optimized_score: int | None = None
     summary: str
     tailored_cv: str
     missing_skills: list[str]

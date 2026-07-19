@@ -20,6 +20,7 @@ Tu tarea: analizar un CV junto con la descripción de una vacante y devolver un 
 Responde SIEMPRE con JSON válido con esta estructura exacta:
 {
   "match_score": 75,
+  "optimized_score": 88,
   "summary": "Breve resumen del match entre el CV y la vacante",
   "cv_struct": {
     "name": "NOMBRE COMPLETO",
@@ -46,7 +47,12 @@ Responde SIEMPRE con JSON válido con esta estructura exacta:
 }
 
 Reglas:
-- match_score: 0-100, basado en skills, experiencia y seniority
+- match_score: 0-100, puntuación del CV ORIGINAL tal como fue enviado, basado en
+  skills, experiencia y seniority
+- optimized_score: 0-100, puntuación que tendría el cv_struct optimizado contra la
+  misma vacante. Sé realista: mejora por keywords y reordenamiento, pero las skills
+  que faltan (missing_skills) siguen limitando el score — no des ~100 si faltan
+  skills clave. Normalmente optimized_score >= match_score.
 - cv_struct: el CV completo optimizado, estructurado para maquetar en UNA página:
   - ESCRÍBELO EN EL IDIOMA DE LA DESCRIPCIÓN DE LA VACANTE (vacante en inglés → CV en inglés).
   - Usa SOLO información real del CV original: reformula y reordena con los términos
@@ -63,8 +69,16 @@ Reglas:
 """
 
 
+def _score_or_none(value) -> int | None:
+    """Convierte a int acotado a 0-100; None si no es numérico."""
+    try:
+        return max(0, min(100, int(value)))
+    except (TypeError, ValueError):
+        return None
+
+
 def _finalize(parsed: dict) -> dict:
-    """Valida cv_struct y deriva de él el texto plano que muestra la UI."""
+    """Valida cv_struct, deriva el texto plano para la UI y sanea los scores."""
     struct = validate_cv_struct(parsed.get("cv_struct"))
     if struct:
         parsed["cv_struct"] = struct
@@ -72,6 +86,12 @@ def _finalize(parsed: dict) -> dict:
     else:
         parsed["cv_struct"] = None
         parsed.setdefault("tailored_cv", "")
+
+    parsed["match_score"] = _score_or_none(parsed.get("match_score")) or 0
+    # Sin CV optimizado válido no hay nada que puntuar.
+    parsed["optimized_score"] = (
+        _score_or_none(parsed.get("optimized_score")) if struct else None
+    )
     return parsed
 
 

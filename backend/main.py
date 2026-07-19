@@ -120,6 +120,7 @@ async def api_tailor_cv(
 
     return TailorResponse(
         match_score=result.get("match_score", 0),
+        optimized_score=result.get("optimized_score"),
         summary=result.get("summary", ""),
         tailored_cv=result.get("tailored_cv", ""),
         missing_skills=result.get("missing_skills", []),
