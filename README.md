@@ -99,14 +99,13 @@ astrodata-jobs/
 ├── dashboard/               # Frontend HTML/CSS/JS
 │   ├── index.html           # Landing page
 │   ├── dashboard.html       # Dashboard interactivo
-│   ├── roadmaps.html        # Roadmaps de aprendizaje
+│   ├── leaderboard.html     # Leaderboard de empresas
 │   ├── styles.css           # Estilos del dashboard
 │   ├── landing.css          # Estilos de la landing
-│   ├── roadmaps.css         # Estilos de roadmaps
+│   ├── leaderboard.css      # Estilos del leaderboard
 │   ├── app.js               # Lógica del dashboard
 │   ├── job-detail.js        # Modal de detalle + CV upload
-│   ├── roadmaps.js          # Lógica de roadmaps
-│   └── roadmaps-data.json   # Datos de roadmaps (5 roles)
+│   └── leaderboard.js       # Lógica del leaderboard
 ├── src/                     # Pipeline de scraping y enriquecimiento
 ├── run_pipeline.sh          # Script para cron (logging + cleanup)
 ├── config.yaml              # Configuración del pipeline
@@ -158,7 +157,7 @@ Vercel (dashboard estático) ──/api/*──> Railway (backend FastAPI)
 Este es un proyecto open source. Si quieres contribuir, corrregir algo, o proponer
 mejoras, revisa la [guía de contribución](CONTRIBUTING.md).
 
-Áreas abiertas: nuevo backend, roadmaps, animaciones, scraping, docs, traducciones.
+Áreas abiertas: nuevo backend, leaderboard, animaciones, scraping, docs, traducciones.
 
 ## Limitaciones conocidas
 

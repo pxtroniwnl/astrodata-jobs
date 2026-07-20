@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Leaderboard de empresas — astro-data jobs</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="favicon.png">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="job-detail.css">
+  <link rel="stylesheet" href="leaderboard.css">
+</head>
+<body>
+  <div class="glow" aria-hidden="true"></div>
+  <div class="stars" aria-hidden="true"></div>
+
+  <!-- Job Detail Modal (reutilizado de dashboard.html) -->
+  <div class="modal-overlay" id="job-modal-overlay"></div>
+  <div class="modal-panel" id="job-modal-panel">
+    <div class="modal-head">
+      <h2 id="modal-job-title">Detalle de vacante</h2>
+      <button class="modal-close" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="modal-body" id="modal-job-body"></div>
+  </div>
+
+  <div class="shell">
+    <nav class="lb-topnav">
+      <a class="nav-brand" href="index.html"><img src="logo.svg" alt="astro-data jobs"></a>
+      <div class="nav-links">
+        <a href="index.html">Landing</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="leaderboard.html" class="active">Leaderboard</a>
+      </div>
+    </nav>
+
+    <header class="lb-hero">
+      <span class="microlabel">Radar de empresas · corrida cada 2h desde LinkedIn</span>
+      <h1>Las empresas<br><span class="fade">que más están contratando.</span></h1>
+      <p class="sub">
+        Rankeamos las empresas por vacantes abiertas, salario y modalidad remota sobre el mismo
+        histórico que alimenta el dashboard. Por defecto muestra solo países de LATAM — ajusta los
+        filtros para ver el resto del mundo.
+      </p>
+    </header>
+
+    <!-- Barra de filtros flotante -->
+    <nav class="filterbar glass" id="filterbar" aria-label="Filtros">
+      <div class="seg" role="group" aria-label="Rango de fechas" id="days-seg">
+        <button data-days="7">7d</button>
+        <button data-days="30" class="on">30d</button>
+        <button data-days="90">90d</button>
+        <button data-days="">Todo</button>
+      </div>
+      <div class="spacer"></div>
+      <button class="clear-btn" id="clear">Limpiar filtros</button>
+    </nav>
+
+    <div class="chips" id="chips"></div>
+
+    <div class="lb-sortbar">
+      <span class="microlabel">Ordenar por</span>
+      <div class="seg" role="group" aria-label="Orden" id="sort-seg">
+        <button data-sort="count" class="on">Más vacantes</button>
+        <button data-sort="salary">Mejor salario</button>
+        <button data-sort="remote">Más remoto</button>
+      </div>
+      <span class="lb-count" id="lb-count"></span>
+    </div>
+
+    <section class="lb-board glass" aria-label="Leaderboard de empresas">
+      <div id="lb-empty" class="lb-empty" hidden>Ninguna empresa coincide con los filtros actuales.</div>
+      <div id="lb-rows"></div>
+    </section>
+
+    <footer class="note">
+      <div>Fuente: vacantes públicas de LinkedIn extraídas por el pipeline local (uso personal/educativo).
+      "Vacantes abiertas" son las vistas por el radar dentro del rango de fechas seleccionado, no una
+      confirmación en tiempo real de que la posición sigue disponible. Los contactos son enlaces de
+      búsqueda en LinkedIn, no datos personales guardados.</div>
+      <div style="display:flex;gap:12px;margin-top:8px;">
+        <a href="index.html" style="color:var(--ink-3);text-decoration:none;font-size:12px;">Landing</a>
+        <a href="dashboard.html" style="color:var(--ink-3);text-decoration:none;font-size:12px;">Dashboard</a>
+        <a href="../CONTRIBUTING.html" style="color:var(--ink-3);text-decoration:none;font-size:12px;">Contribuir</a>
+        <a href="https://github.com/pxtroniwnl/astrodata-jobs" style="color:var(--ink-3);text-decoration:none;font-size:12px;" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </footer>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="job-detail.js"></script>
+  <script src="leaderboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,210 @@
+/* ==========================================================================
+   astro-data jobs — leaderboard de empresas
+   ========================================================================== */
+
+/* ---- Nav propio (dashboard.html no trae topnav; index.html usa landing.css) ---- */
+.lb-topnav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 20px 0;
+}
+.lb-topnav .nav-brand { line-height: 0; margin-right: auto; }
+.lb-topnav .nav-brand img { height: 30px; width: auto; display: block; }
+.lb-topnav .nav-links { display: flex; gap: 4px; }
+.lb-topnav .nav-links a {
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: background 180ms ease, color 180ms ease;
+}
+.lb-topnav .nav-links a:hover { color: var(--ink); background: rgba(255, 255, 255, 0.06); }
+.lb-topnav .nav-links a.active { color: var(--bg); background: var(--ink); }
+
+/* ---- Hero ---- */
+.lb-hero { padding: 28px 4px 8px; max-width: 720px; }
+.lb-hero .microlabel { display: inline-block; margin-bottom: 14px; }
+.lb-hero h1 {
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  margin-bottom: 14px;
+}
+.lb-hero h1 .fade {
+  background: linear-gradient(90deg, var(--ink) 0%, var(--sage) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.lb-hero .sub { font-size: 15px; line-height: 1.6; color: var(--ink-2); max-width: 60ch; }
+
+/* ---- Barra de orden ---- */
+.lb-sortbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 4px 8px 18px;
+}
+.lb-count { font-size: 12.5px; color: var(--ink-3); margin-left: auto; }
+
+/* ---- Tablero ---- */
+.lb-board { padding: 10px; margin-bottom: 40px; }
+.lb-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--ink-3);
+  font-size: 14px;
+}
+
+.lb-row {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: background 180ms ease;
+}
+.lb-row + .lb-row { margin-top: 4px; }
+.lb-row:hover { background: rgba(255, 255, 255, 0.03); }
+.lb-row.open { background: rgba(255, 255, 255, 0.04); }
+
+.lb-row-main {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 14px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.lb-rank {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-3);
+  width: 36px;
+  flex-shrink: 0;
+}
+.lb-row:nth-child(-n+3) .lb-rank { color: var(--gold); }
+
+.lb-company-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.lb-company-name {
+  font-size: 15px;
+  font-weight: 620;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lb-countries { font-size: 12px; color: var(--ink-3); }
+
+.lb-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+.lb-badge {
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid var(--line);
+}
+.lb-badge.count { background: rgba(76, 127, 208, 0.12); color: var(--blue); border-color: rgba(76, 127, 208, 0.25); }
+.lb-badge.salary { background: rgba(168, 134, 46, 0.12); color: var(--gold); border-color: rgba(168, 134, 46, 0.25); }
+.lb-badge.remote { background: rgba(113, 150, 59, 0.12); color: var(--sage); border-color: rgba(113, 150, 59, 0.25); }
+
+.lb-caret {
+  font-size: 12px;
+  color: var(--ink-3);
+  transition: transform 200ms ease;
+  flex-shrink: 0;
+}
+.lb-row.open .lb-caret { transform: rotate(180deg); }
+
+/* ---- Detalle expandido ---- */
+.lb-row-detail { padding: 0 16px 18px 68px; }
+
+.lb-jobs-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.lb-job-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line-soft);
+}
+.lb-job-main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.lb-job-title { font-size: 13.5px; font-weight: 600; }
+.lb-job-main .tag {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink-2);
+}
+.lb-job-main .tag.salary { background: rgba(168, 134, 46, 0.14); color: var(--gold); }
+
+.lb-job-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.lb-job-link {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sage);
+  text-decoration: none;
+}
+.lb-job-link:hover { text-decoration: underline; }
+.lb-job-cv-btn {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+.lb-job-cv-btn:hover { background: rgba(255, 255, 255, 0.1); }
+
+.lb-jobs-more { font-size: 12px; color: var(--ink-3); padding: 4px 4px 0; }
+
+.lb-contacts-btn {
+  padding: 11px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(113, 150, 59, 0.08);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 180ms ease;
+}
+.lb-contacts-btn:hover:not(:disabled) { background: rgba(113, 150, 59, 0.16); }
+.lb-contacts-btn:disabled { opacity: 0.6; cursor: default; }
+
+@media (max-width: 720px) {
+  .lb-row-main { flex-wrap: wrap; }
+  .lb-badges { justify-content: flex-start; width: 100%; margin-left: 52px; }
+  .lb-row-detail { padding-left: 16px; }
+}

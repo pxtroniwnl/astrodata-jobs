@@ -17,7 +17,7 @@ Gracias por tu interés en contribuir. Este proyecto es una herramienta personal
 
 - **Backend (FastAPI)** — nuevos endpoints, optimización del CV tailoring, mejor parsing de CVs
 - **Dashboard** — nuevas gráficas, filtros, mejoras de UX, animaciones
-- **Roadmaps** — nuevos roles, recursos actualizados, mejor contenido
+- **Leaderboard** — nuevos criterios de ranking, más filtros, mejoras de UX
 - **Scraping** — fuentes de datos adicionales, mejora del enriquecimiento
 - **Docs** — correcciones, traducciones, tutoriales
 - **Bug fixes** — siempre bienvenidos
