@@ -1,7 +1,7 @@
 """Enriquecimiento: skills, rol canónico, seniority, ciudad, región de Colombia y salario USD.
 
-Corre sobre toda la base después de cada upsert, así las reglas se pueden
-mejorar y re-aplicar al histórico completo.
+Por defecto solo procesa vacantes nuevas (sin enriquecer). Para reaplicar
+reglas mejoradas a todo el histórico, llamar con only_new=False.
 """
 
 import json
@@ -310,11 +310,18 @@ def salary_usd(row: pd.Series, fx: dict[str, float]) -> tuple[float | None, floa
     return lo, hi, mid
 
 
-def enrich_all(conn, config: dict) -> int:
-    """Recalcula todas las columnas derivadas para toda la base."""
+def enrich_all(conn, config: dict, only_new: bool = True) -> int:
+    """Recalcula las columnas derivadas.
+
+    Por defecto (only_new=True) solo procesa filas aún no enriquecidas
+    (role_canonical IS NULL), para no releer/reescribir todo el histórico
+    en cada corrida. Pasar only_new=False para reaplicar reglas mejoradas
+    a toda la base.
+    """
+    where = "WHERE role_canonical IS NULL" if only_new else ""
     df = pd.read_sql(
         "SELECT id, title, company, location, is_remote, description, "
-        "search_location, interval, min_amount, max_amount, currency FROM jobs",
+        f"search_location, interval, min_amount, max_amount, currency FROM jobs {where}",
         conn,
     )
     if df.empty:

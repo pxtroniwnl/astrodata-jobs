@@ -26,6 +26,10 @@ def main() -> None:
     parser.add_argument("--limit", type=int, help="máximo de búsquedas a ejecutar (pruebas)")
     parser.add_argument("--results", type=int, help="resultados por búsqueda (pruebas)")
     parser.add_argument("--skip-scrape", action="store_true", help="solo re-enriquecer y exportar")
+    parser.add_argument(
+        "--full-reenrich", action="store_true",
+        help="reaplicar el enriquecimiento a toda la base, no solo a las vacantes nuevas",
+    )
     parser.add_argument("--config", default=str(CONFIG_PATH), help="ruta a un config.yaml alternativo")
     args = parser.parse_args()
 
@@ -60,14 +64,14 @@ def main() -> None:
         else:
             log.warning("La corrida no trajo ninguna vacante")
 
-    enriched = enrich.enrich_all(conn, config)
-    df = storage.export_tables(conn)
+    enriched = enrich.enrich_all(conn, config, only_new=not args.full_reenrich)
     export_dashboard.export_data_js(conn)
+    total = storage.count_jobs(conn)
 
     log.info(
         "Resumen: búsquedas OK=%d fallidas=%d | vacantes nuevas=%d ya vistas=%d | "
         "base total=%d (enriquecidas=%d)",
-        ok, failed, new, seen, len(df), enriched,
+        ok, failed, new, seen, total, enriched,
     )
     conn.close()
 
